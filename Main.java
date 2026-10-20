@@ -6,7 +6,7 @@ import java.util.Arrays;
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in).useLocale(Locale.US);
-        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-4) ===");
+        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-5) ===");
 
         try {
             System.out.print("Скільки завдань ви хочете створити? ");
@@ -123,19 +123,21 @@ public class Main {
                 System.out.println("Помилка при створенні об'єкта пошуку: " + e.getMessage());
             }
 
-            // --- ДЕМОНСТРАЦІЯ ЛР 4 ---
+            // =========================================================================
+            // --- ДЕМОНСТРАЦІЯ ЛР 4 (Інтерфейси, Default-методи, Strategy) ---
+            // =========================================================================
             System.out.println("\n=== ДЕМОНСТРАЦІЯ ЛАБОРАТОРНОЇ РОБОТИ №4 ===");
 
             Task demoTask = (tasks.length > 0)
                     ? Arrays.stream(tasks).filter(t -> t != null).max((t1, t2) -> Double.compare(t1.getEstimatedHours(), t2.getEstimatedHours())).orElse(new Task("Демонстраційна фіча", "Архітектор", 1, 6.0))
                     : new Task("Демонстраційна фіча", "Архітектор", 1, 6.0);
 
-            // Рівень 1: Поліморфізм інтерфейсів
-            System.out.println("\n--- Рівень 1: Поліморфізм інтерфейсу CostCalculationStrategy ---");
+            // Поліморфізм інтерфейсу CostCalculationStrategy (створено через Factory з ЛР 5)
+            System.out.println("\n--- Рівень 1 (ЛР 4): Поліморфізм інтерфейсу CostCalculationStrategy ---");
             CostCalculationStrategy[] strategies = new CostCalculationStrategy[] {
-                new PriorityCostStrategy(),
-                new FixedCostStrategy(),
-                new VolumeDiscountCostStrategy()
+                CostStrategyFactory.createStrategy("priority"),
+                CostStrategyFactory.createStrategy("fixed"),
+                CostStrategyFactory.createStrategy("volume")
             };
 
             System.out.println("Розрахунок вартості для завдання: " + demoTask.getName() + 
@@ -145,8 +147,8 @@ public class Main {
                 System.out.printf("   [%s] -> $%.2f\n", strategy.getStrategyName(), cost);
             }
 
-            // Рівень 2: Default-методи та множинна реалізація
-            System.out.println("\n--- Рівень 2: Default-методи та множинна реалізація ---");
+            // Default-методи та множинна реалізація (Reportable, Comparable)
+            System.out.println("\n--- Рівень 2 (ЛР 4): Default-методи та множинна реалізація ---");
             System.out.println("1) Виклик default-методу getDetailedDescription():");
             for (CostCalculationStrategy strategy : strategies) {
                 System.out.println("   " + strategy.getDetailedDescription(demoTask, defaultHourlyRate));
@@ -170,18 +172,81 @@ public class Main {
                 System.out.printf("   * %.1f год — %s (%s)\n", t.getEstimatedHours(), t.getName(), t.getAssignee());
             }
 
-            // Рівень 3: Паттерн Strategy (зміна поведінки в runtime)
-            System.out.println("\n--- Рівень 3: Паттерн Strategy (зміна поведінки в runtime) ---");
-            System.out.println("Початкова стратегія: " + demoTask.getCostStrategy().getStrategyName());
-            System.out.printf("   Початкова вартість: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
+            // =========================================================================
+            // --- ДЕМОНСТРАЦІЯ ЛР 5: ПАТТЕРНИ ПРОЄКТУВАННЯ (Factory, Observer, Adapter) ---
+            // =========================================================================
+            System.out.println("\n=======================================================");
+            System.out.println("   ДЕМОНСТРАЦІЯ ФУНКЦІОНАЛУ ЛАБОРАТОРНОЇ РОБОТИ №5");
+            System.out.println("=======================================================");
 
-            demoTask.setCostStrategy(new FixedCostStrategy());
-            System.out.println("Зміна стратегії на FixedCostStrategy:");
-            System.out.printf("   Оновлена вартість в runtime: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
+            // --- Рівень 1: Паттерн Factory ---
+            System.out.println("\n--- Рівень 1: Паттерн Factory (CostStrategyFactory) ---");
+            System.out.println("Створення стратегій через фабрику без прямих викликів new:");
+            CostCalculationStrategy factoryStrategy1 = CostStrategyFactory.createStrategy("fixed");
+            CostCalculationStrategy factoryStrategy2 = CostStrategyFactory.createStrategy("volume");
+            System.out.println("✅ Фабрика успішно створила: " + factoryStrategy1.getStrategyName());
+            System.out.println("✅ Фабрика успішно створила: " + factoryStrategy2.getStrategyName());
 
-            demoTask.setCostStrategy(new VolumeDiscountCostStrategy());
-            System.out.println("Зміна стратегії на VolumeDiscountCostStrategy:");
-            System.out.printf("   Оновлена вартість в runtime: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
+            try {
+                System.out.print("Тест фабрики на невідомий тип ('unknown'): ");
+                CostStrategyFactory.createStrategy("unknown");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Перехоплено очікувану помилку: " + e.getMessage());
+            }
+
+            // Динамічна зміна стратегії через фабрику (поєднання Factory + Strategy)
+            demoTask.setCostStrategy(CostStrategyFactory.createStrategy("fixed"));
+            System.out.printf("Завданню призначено стратегію з фабрики: %s (вартість: $%.2f)\n", 
+                    demoTask.getCostStrategy().getStrategyName(), demoTask.calculateCost(defaultHourlyRate));
+
+            // --- Рівень 2: Паттерн Observer ---
+            System.out.println("\n--- Рівень 2: Паттерн Observer (Підписка та сповіщення) ---");
+            TaskObserver auditLogger = new TaskAuditLogger();
+            TaskObserver alertNotifier = new TaskAlertNotifier();
+
+            System.out.println("Підписуємо спостерігачів (TaskAuditLogger та TaskAlertNotifier) на demoTask...");
+            demoTask.attach(auditLogger);
+            demoTask.attach(alertNotifier);
+
+            System.out.println("\n1) Зміна статусу завдання на 'IN_PROGRESS':");
+            demoTask.setStatus("IN_PROGRESS");
+
+            System.out.println("\n2) Зміна стратегії ціноутворення через фабрику:");
+            demoTask.setCostStrategy(CostStrategyFactory.createStrategy("volume"));
+
+            System.out.println("\n3) Зміна статусу завдання на 'COMPLETED':");
+            demoTask.setStatus("COMPLETED");
+
+            // --- Рівень 3: Паттерн Adapter ---
+            System.out.println("\n--- Рівень 3: Паттерн Adapter (Інтеграція стороннього Legacy API) ---");
+            // Моделюємо сторонній об'єкт із несумісним API (хвилини замість годин, "CRITICAL" замість int 1)
+            LegacyExternalTask externalTask = new LegacyExternalTask(
+                    "Оновлення безпеки платіжного шлюзу",
+                    "sec-team@fintech.io",
+                    150, // 150 хвилин = 2.5 години
+                    "CRITICAL" // CRITICAL = пріоритет 1
+            );
+            System.out.println("Оригінальний зовнішній об'єкт (LegacyExternalTask):");
+            System.out.printf("   Title: '%s' | Dev: %s | Duration: %d хв | Urgency: %s\n",
+                    externalTask.getTitle(), externalTask.getDeveloperEmail(), 
+                    externalTask.getDurationInMinutes(), externalTask.getUrgencyLevel());
+
+            // Адаптуємо сторонній об'єкт до нашої моделі Task
+            Task adaptedTask = new LegacyTaskAdapter(externalTask);
+            System.out.println("\nОб'єкт після адаптації (LegacyTaskAdapter як Task):");
+            System.out.println("   " + adaptedTask);
+            System.out.printf("   -> Оцінений час у годинах: %.1f год.\n", adaptedTask.getEstimatedHours());
+            System.out.printf("   -> Адаптований пріоритет: %d (%s)\n", adaptedTask.getPriority(), adaptedTask.getPriorityLabel());
+            System.out.printf("   -> Розрахунок вартості (ставка $%.2f): $%.2f\n", 
+                    defaultHourlyRate, adaptedTask.calculateCost(defaultHourlyRate));
+
+            // Перевіряємо інтеграцію адаптованого завдання з паттерном Observer
+            System.out.println("\nТестуємо спостереження за адаптованим завданням:");
+            adaptedTask.attach(auditLogger);
+            adaptedTask.attach(alertNotifier);
+            adaptedTask.setStatus("RESOLVED");
+
+            System.out.println("\n=======================================================");
 
         } catch (NegativeArraySizeException e) {
             System.out.println("❌ Розмір масиву не може бути від'ємним!");
