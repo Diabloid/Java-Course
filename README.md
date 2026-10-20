@@ -84,14 +84,16 @@
 
 ### Швидкий запуск в один клік (з автоматичним налаштуванням UTF-8):
 
-- **Через PowerShell:**
+- **Через BAT-файл (працює завжди без обмежень політик безпеки):**
+  ```powershell
+  .\run.bat
+  ```
+- **Через PowerShell-скрипт:**
   ```powershell
   .\run.ps1
   ```
-- **Через CMD або подвійний клік у Провіднику:**
-  ```cmd
-  run.bat
-  ```
+  *(Якщо PowerShell блокує скрипти через ExecutionPolicy, запустіть: `powershell -ExecutionPolicy Bypass -File .\run.ps1` або один раз виконайте `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`)*
+- **Або подвійним кліком на `run.bat` у Провіднику Windows.**
 
 ---
 
