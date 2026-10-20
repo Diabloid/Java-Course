@@ -123,20 +123,15 @@ public class Main {
                 System.out.println("Помилка при створенні об'єкта пошуку: " + e.getMessage());
             }
 
-            // =========================================================================
-            // --- ДЕМОНСТРАЦІЯ ВИМОГ ЛАБОРАТОРНОЇ РОБОТИ №4 ---
-            // =========================================================================
-            System.out.println("\n=======================================================");
-            System.out.println("   ДЕМОНСТРАЦІЯ ФУНКЦІОНАЛУ ЛАБОРАТОРНОЇ РОБОТИ №4");
-            System.out.println("=======================================================");
+            // --- ДЕМОНСТРАЦІЯ ЛР 4 ---
+            System.out.println("\n=== ДЕМОНСТРАЦІЯ ЛАБОРАТОРНОЇ РОБОТИ №4 ===");
 
-            // Для наочності беремо завдання з найбільшою кількістю годин (або створюємо демонстраційне)
             Task demoTask = (tasks.length > 0)
                     ? Arrays.stream(tasks).filter(t -> t != null).max((t1, t2) -> Double.compare(t1.getEstimatedHours(), t2.getEstimatedHours())).orElse(new Task("Демонстраційна фіча", "Архітектор", 1, 6.0))
                     : new Task("Демонстраційна фіча", "Архітектор", 1, 6.0);
 
-            // --- РІВЕНЬ 1. Базовий: Поліморфізм через інтерфейси ---
-            System.out.println("\n--- Рівень 1: Поліморфне використання інтерфейсу CostCalculationStrategy ---");
+            // Рівень 1: Поліморфізм інтерфейсів
+            System.out.println("\n--- Рівень 1: Поліморфізм інтерфейсу CostCalculationStrategy ---");
             CostCalculationStrategy[] strategies = new CostCalculationStrategy[] {
                 new PriorityCostStrategy(),
                 new FixedCostStrategy(),
@@ -150,12 +145,10 @@ public class Main {
                 System.out.printf("   [%s] -> $%.2f\n", strategy.getStrategyName(), cost);
             }
 
-            // --- РІВЕНЬ 2. Середній: Default-методи та множинна реалізація інтерфейсів ---
-            System.out.println("\n--- Рівень 2: Default-методи та множинна реалізація інтерфейсів ---");
+            // Рівень 2: Default-методи та множинна реалізація
+            System.out.println("\n--- Рівень 2: Default-методи та множинна реалізація ---");
             System.out.println("1) Виклик default-методу getDetailedDescription():");
             for (CostCalculationStrategy strategy : strategies) {
-                // FixedCostStrategy використовує успадкований default-метод,
-                // а PriorityCostStrategy перевизначає його.
                 System.out.println("   " + strategy.getDetailedDescription(demoTask, defaultHourlyRate));
             }
 
@@ -163,37 +156,32 @@ public class Main {
             Reportable[] reportables = tasks;
             for (Reportable r : reportables) {
                 if (r != null) {
-                    r.printReport(); // виклик default-методу з Reportable
+                    r.printReport();
                 }
             }
 
-            System.out.println("\n3) Множинна реалізація: Інтерфейс Comparable<Task> (природне сортування):");
-            // Фільтруємо null перед Arrays.sort
+            System.out.println("\n3) Множинна реалізація: Інтерфейс Comparable<Task>:");
             Task[] nonNullTasks = Arrays.stream(tasks)
                                         .filter(t -> t != null)
                                         .toArray(Task[]::new);
-            Arrays.sort(nonNullTasks); // використовує compareTo із Task
-            System.out.println("Масив після сортування через Arrays.sort() (Comparable<Task>):");
+            Arrays.sort(nonNullTasks);
+            System.out.println("Масив після сортування через Arrays.sort():");
             for (Task t : nonNullTasks) {
                 System.out.printf("   * %.1f год — %s (%s)\n", t.getEstimatedHours(), t.getName(), t.getAssignee());
             }
 
-            // --- РІВЕНЬ 3. Високий: Паттерн Strategy & зміна стратегії в Runtime ---
-            System.out.println("\n--- Рівень 3: Паттерн Strategy (зміна поведінки об'єкта в Runtime) ---");
-            System.out.println("Початкова стратегія завдання: " + demoTask.getCostStrategy().getStrategyName());
+            // Рівень 3: Паттерн Strategy (зміна поведінки в runtime)
+            System.out.println("\n--- Рівень 3: Паттерн Strategy (зміна поведінки в runtime) ---");
+            System.out.println("Початкова стратегія: " + demoTask.getCostStrategy().getStrategyName());
             System.out.printf("   Початкова вартість: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
 
-            System.out.println("\n-> Динамічно перемикаємо стратегію на FixedCostStrategy в runtime...");
             demoTask.setCostStrategy(new FixedCostStrategy());
-            System.out.println("Нова активна стратегія: " + demoTask.getCostStrategy().getStrategyName());
-            System.out.printf("   Оновлена вартість без створення нового об'єкта: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
+            System.out.println("Зміна стратегії на FixedCostStrategy:");
+            System.out.printf("   Оновлена вартість в runtime: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
 
-            System.out.println("\n-> Динамічно перемикаємо стратегію на VolumeDiscountCostStrategy в runtime...");
             demoTask.setCostStrategy(new VolumeDiscountCostStrategy());
-            System.out.println("Нова активна стратегія: " + demoTask.getCostStrategy().getStrategyName());
-            System.out.printf("   Оновлена вартість зі знижкою на тривалість: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
-
-            System.out.println("\n=======================================================");
+            System.out.println("Зміна стратегії на VolumeDiscountCostStrategy:");
+            System.out.printf("   Оновлена вартість в runtime: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
 
         } catch (NegativeArraySizeException e) {
             System.out.println("❌ Розмір масиву не може бути від'ємним!");

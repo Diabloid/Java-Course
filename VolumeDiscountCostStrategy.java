@@ -1,8 +1,4 @@
-/**
- * Стратегія прогресивної знижки за тривалість (Volume Discount Pricing).
- * Завдання тривалістю до 5 годин оплачуються за стандартною ставкою,
- * а на всі години понад 5 надається знижка 15%.
- */
+// Прогресивна знижка для завдань > 5 год (Рівень 1)
 public class VolumeDiscountCostStrategy extends AbstractCostStrategy {
 
     private static final double THRESHOLD_HOURS = 5.0;

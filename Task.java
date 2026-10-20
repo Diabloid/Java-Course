@@ -1,40 +1,31 @@
 import java.util.Objects;
 
-/**
- * Доменна сутність завдання в системі (ЛР 1-4).
- * Реалізує множинне успадкування інтерфейсів (Рівень 2):
- * - Reportable: бізнес-поведінка генерації звітів;
- * - Comparable<Task>: системна поведінка порівняння та сортування за часом виконання.
- *
- * Виступає контекстним класом для паттерна Strategy (Рівень 3),
- * делегуючи розрахунок вартості інтерфейсу CostCalculationStrategy
- * і підтримуючи динамічну зміну стратегії в runtime.
- */
+// Доменна сутність завдання (Рівень 2: множинна реалізація Reportable, Comparable)
 public class Task implements Reportable, Comparable<Task> {
     private String name;
     private String assignee;
     private int priority;
     private double estimatedHours;
 
-    // Паттерн Strategy: посилання на поточну стратегію ціноутворення
+    // Паттерн Strategy (Рівень 3)
     private CostCalculationStrategy costStrategy;
 
-    // Базовий конструктор (ЛР 2-3) з підстановкою стратегії за замовчуванням
+    // Базовий конструктор (ЛР 2-3)
     public Task(String name, String assignee, int priority, double estimatedHours) 
            throws InvalidPriorityException, InvalidTimeException {
         this(name, assignee, priority, estimatedHours, new PriorityCostStrategy());
     }
 
-    // Розширений конструктор із можливістю задання стратегії ціноутворення (ЛР 4)
+    // Розширений конструктор зі стратегією (ЛР 4)
     public Task(String name, String assignee, int priority, double estimatedHours, CostCalculationStrategy costStrategy)
            throws InvalidPriorityException, InvalidTimeException {
         
-        // Валідація пріоритету (ЛР 3: 1 - Високий, 2 - Середній, 3 - Низький)
+        // Валідація пріоритету (ЛР 3)
         if (priority < 1 || priority > 3) {
             throw new InvalidPriorityException("Пріоритет має бути від 1 до 3", priority);
         }
         
-        // Валідація часу (ЛР 3: час виконання повинен бути строго більше нуля)
+        // Валідація часу (ЛР 3)
         if (estimatedHours <= 0) {
             throw new InvalidTimeException("Оцінений час має бути більшим за 0", estimatedHours);
         }
@@ -67,16 +58,11 @@ public class Task implements Reportable, Comparable<Task> {
         return estimatedHours;
     }
 
-    // Управління стратегією ціноутворення (Паттерн Strategy - Рівень 3)
     public CostCalculationStrategy getCostStrategy() {
         return costStrategy;
     }
 
-    /**
-     * Динамічна зміна стратегії розрахунку вартості під час виконання програми (Runtime).
-     *
-     * @param costStrategy нова стратегія ціноутворення
-     */
+    // Зміна стратегії в runtime (Рівень 3)
     public void setCostStrategy(CostCalculationStrategy costStrategy) {
         if (costStrategy == null) {
             throw new IllegalArgumentException("Стратегія розрахунку вартості не може бути null");
@@ -84,17 +70,12 @@ public class Task implements Reportable, Comparable<Task> {
         this.costStrategy = costStrategy;
     }
 
-    /**
-     * Делегування розрахунку вартості поточній стратегії (Паттерн Strategy).
-     *
-     * @param hourlyRate базова ставка за годину
-     * @return розрахована вартість
-     */
+    // Делегування розрахунку вартості стратегії (Рівень 3)
     public double calculateCost(double hourlyRate) {
         return this.costStrategy.calculateCost(this, hourlyRate);
     }
 
-    // Отримання текстового опису пріоритету (бізнес-логіка з ЛР 1)
+    // Текстовий опис пріоритету (з ЛР 1)
     public String getPriorityLabel() {
         switch (priority) {
             case 1:
@@ -108,7 +89,6 @@ public class Task implements Reportable, Comparable<Task> {
         }
     }
 
-    // Методи зворотної сумісності з ЛР 1-3
     public double calculateBaseCost(double hourlyRate) {
         if (hourlyRate <= 0) {
             throw new IllegalArgumentException("Годинна ставка має бути більшою за 0");
@@ -120,14 +100,14 @@ public class Task implements Reportable, Comparable<Task> {
         return calculateCost(hourlyRate);
     }
 
-    // Реалізація інтерфейсу Reportable (Рівень 2)
+    // Реалізація Reportable (Рівень 2)
     @Override
     public String generateSummary() {
         return String.format("[ЗВІТ ЗАВДАННЯ] '%s' | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Стратегія: %s",
                 name, assignee, estimatedHours, getPriorityLabel(), costStrategy.getStrategyName());
     }
 
-    // Реалізація інтерфейсу Comparable<Task> (Рівень 2) для природного сортування за часом
+    // Реалізація Comparable<Task> за часом (Рівень 2)
     @Override
     public int compareTo(Task other) {
         if (other == null) {
@@ -136,14 +116,14 @@ public class Task implements Reportable, Comparable<Task> {
         return Double.compare(this.estimatedHours, other.estimatedHours);
     }
 
-    // Перевизначення toString() (ЛР 1-4)
+    // Перевизначення toString()
     @Override
     public String toString() {
         return String.format("Завдання: '%s' | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
                              name, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
     }
 
-    // Перевизначення equals() для порівняння об'єктів (ЛР 2-4)
+    // Перевизначення equals() (ЛР 2-3)
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
