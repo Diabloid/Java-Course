@@ -1,14 +1,20 @@
 import java.util.Objects;
+import java.util.List;
+import java.util.ArrayList;
 
-// Доменна сутність завдання (Рівень 2: множинна реалізація Reportable, Comparable)
+// Доменна сутність завдання (Суб'єкт для паттерна Observer, Рівень 2)
 public class Task implements Reportable, Comparable<Task> {
     private String name;
     private String assignee;
     private int priority;
     private double estimatedHours;
+    private String status = "NEW";
 
-    // Паттерн Strategy (Рівень 3)
+    // Паттерн Strategy (ЛР 4)
     private CostCalculationStrategy costStrategy;
+
+    // Паттерн Observer: список підписників (Рівень 2)
+    private final List<TaskObserver> observers = new ArrayList<>();
 
     // Базовий конструктор (ЛР 2-3)
     public Task(String name, String assignee, int priority, double estimatedHours) 
@@ -58,19 +64,56 @@ public class Task implements Reportable, Comparable<Task> {
         return estimatedHours;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    // Управління спостерігачами (Паттерн Observer - Рівень 2)
+    public void attach(TaskObserver observer) {
+        if (observer != null && !observers.contains(observer)) {
+            observers.add(observer);
+        }
+    }
+
+    public void detach(TaskObserver observer) {
+        observers.remove(observer);
+    }
+
+    protected void notifyObservers(String changeType, String details) {
+        for (TaskObserver observer : observers) {
+            observer.onTaskUpdated(this, changeType, details);
+        }
+    }
+
+    // Зміна статусу завдання зі сповіщенням підписників (Рівень 2)
+    public void setStatus(String status) {
+        this.status = status;
+        notifyObservers("STATUS_CHANGED", "Новий статус: " + status);
+    }
+
+    // Зміна пріоритету зі сповіщенням підписників (Рівень 2)
+    public void setPriority(int priority) throws InvalidPriorityException {
+        if (priority < 1 || priority > 3) {
+            throw new InvalidPriorityException("Пріоритет має бути від 1 до 3", priority);
+        }
+        this.priority = priority;
+        notifyObservers("PRIORITY_CHANGED", "Новий пріоритет: " + priority + " (" + getPriorityLabel() + ")");
+    }
+
     public CostCalculationStrategy getCostStrategy() {
         return costStrategy;
     }
 
-    // Зміна стратегії в runtime (Рівень 3)
+    // Зміна стратегії в runtime зі сповіщенням підписників (ЛР 4 та ЛР 5)
     public void setCostStrategy(CostCalculationStrategy costStrategy) {
         if (costStrategy == null) {
             throw new IllegalArgumentException("Стратегія розрахунку вартості не може бути null");
         }
         this.costStrategy = costStrategy;
+        notifyObservers("STRATEGY_CHANGED", "Встановлено стратегію: " + costStrategy.getStrategyName());
     }
 
-    // Делегування розрахунку вартості стратегії (Рівень 3)
+    // Делегування розрахунку вартості стратегії (ЛР 4)
     public double calculateCost(double hourlyRate) {
         return this.costStrategy.calculateCost(this, hourlyRate);
     }
@@ -100,14 +143,14 @@ public class Task implements Reportable, Comparable<Task> {
         return calculateCost(hourlyRate);
     }
 
-    // Реалізація Reportable (Рівень 2)
+    // Реалізація Reportable (ЛР 4)
     @Override
     public String generateSummary() {
-        return String.format("[ЗВІТ ЗАВДАННЯ] '%s' | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Стратегія: %s",
-                name, assignee, estimatedHours, getPriorityLabel(), costStrategy.getStrategyName());
+        return String.format("[ЗВІТ ЗАВДАННЯ] '%s' | Статус: %s | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Стратегія: %s",
+                name, status, assignee, estimatedHours, getPriorityLabel(), costStrategy.getStrategyName());
     }
 
-    // Реалізація Comparable<Task> за часом (Рівень 2)
+    // Реалізація Comparable<Task> за часом (ЛР 4)
     @Override
     public int compareTo(Task other) {
         if (other == null) {
@@ -119,8 +162,8 @@ public class Task implements Reportable, Comparable<Task> {
     // Перевизначення toString()
     @Override
     public String toString() {
-        return String.format("Завдання: '%s' | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
-                             name, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
+        return String.format("Завдання: '%s' | Статус: %s | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
+                             name, status, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
     }
 
     // Перевизначення equals() (ЛР 2-3)
