@@ -1,11 +1,12 @@
 import java.util.Scanner;
 import java.util.Locale;
 import java.util.InputMismatchException;
+import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in).useLocale(Locale.US);
-        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-3) ===");
+        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-4) ===");
 
         try {
             System.out.print("Скільки завдань ви хочете створити? ");
@@ -60,8 +61,8 @@ public class Main {
             for (Task t : tasks) {
                 if (t != null) {
                     System.out.println(t);
-                    System.out.printf("   -> Базова вартість: $%.2f | Фінальна вартість (з коефіцієнтом терміновості): $%.2f\n",
-                            t.calculateBaseCost(defaultHourlyRate), t.calculateFinalCost(defaultHourlyRate));
+                    System.out.printf("   -> Базова вартість: $%.2f | Фінальна вартість (%s): $%.2f\n",
+                            t.calculateBaseCost(defaultHourlyRate), t.getCostStrategy().getStrategyName(), t.calculateCost(defaultHourlyRate));
                 }
             }
 
@@ -75,7 +76,7 @@ public class Main {
                         highPriorityCount++;
                     }
                     totalHours += t.getEstimatedHours();
-                    totalCost += t.calculateFinalCost(defaultHourlyRate);
+                    totalCost += t.calculateCost(defaultHourlyRate);
                 }
             }
             System.out.println("\nКількість термінових завдань (пріоритет 1): " + highPriorityCount);
@@ -94,18 +95,17 @@ public class Main {
                 }
             }
 
-            System.out.println("\n=== Масив завдань ПІСЛЯ сортування (за часом) ===");
+            System.out.println("\n=== Масив завдань ПІСЛЯ сортування Bubble Sort (ЛР 2) ===");
             for (Task t : tasks) {
                 if (t != null) System.out.println(t);
             }
 
             // --- ТЕСТУВАННЯ ЛІНІЙНОГО ПОШУКУ (ЛР 2 & ЛР 3) ---
-            System.out.println("\n=== Тестування лінійного пошуку ===");
+            System.out.println("\n=== Тестування лінійного пошуку (ЛР 2-3) ===");
             System.out.println("Шукаємо завдання з назвою 'Тест', виконавцем 'Ваня' та пріоритетом 1...");
             
-            // Тепер створення Task вимагає try-catch через перевірку валідності даних
             try {
-                Task searchTarget = new Task("Тест", "Ваня", 1, 1.0); // час має бути > 0, інакше виняток
+                Task searchTarget = new Task("Тест", "Ваня", 1, 1.0);
                 boolean found = false;
                 
                 for (int i = 0; i < tasks.length; i++) {
@@ -123,10 +123,84 @@ public class Main {
                 System.out.println("Помилка при створенні об'єкта пошуку: " + e.getMessage());
             }
 
+            // =========================================================================
+            // --- ДЕМОНСТРАЦІЯ ВИМОГ ЛАБОРАТОРНОЇ РОБОТИ №4 ---
+            // =========================================================================
+            System.out.println("\n=======================================================");
+            System.out.println("   ДЕМОНСТРАЦІЯ ФУНКЦІОНАЛУ ЛАБОРАТОРНОЇ РОБОТИ №4");
+            System.out.println("=======================================================");
+
+            // Для наочності беремо завдання з найбільшою кількістю годин (або створюємо демонстраційне)
+            Task demoTask = (tasks.length > 0)
+                    ? Arrays.stream(tasks).filter(t -> t != null).max((t1, t2) -> Double.compare(t1.getEstimatedHours(), t2.getEstimatedHours())).orElse(new Task("Демонстраційна фіча", "Архітектор", 1, 6.0))
+                    : new Task("Демонстраційна фіча", "Архітектор", 1, 6.0);
+
+            // --- РІВЕНЬ 1. Базовий: Поліморфізм через інтерфейси ---
+            System.out.println("\n--- Рівень 1: Поліморфне використання інтерфейсу CostCalculationStrategy ---");
+            CostCalculationStrategy[] strategies = new CostCalculationStrategy[] {
+                new PriorityCostStrategy(),
+                new FixedCostStrategy(),
+                new VolumeDiscountCostStrategy()
+            };
+
+            System.out.println("Розрахунок вартості для завдання: " + demoTask.getName() + 
+                               " (" + demoTask.getEstimatedHours() + " год, пріоритет " + demoTask.getPriority() + ")");
+            for (CostCalculationStrategy strategy : strategies) {
+                double cost = strategy.calculateCost(demoTask, defaultHourlyRate);
+                System.out.printf("   [%s] -> $%.2f\n", strategy.getStrategyName(), cost);
+            }
+
+            // --- РІВЕНЬ 2. Середній: Default-методи та множинна реалізація інтерфейсів ---
+            System.out.println("\n--- Рівень 2: Default-методи та множинна реалізація інтерфейсів ---");
+            System.out.println("1) Виклик default-методу getDetailedDescription():");
+            for (CostCalculationStrategy strategy : strategies) {
+                // FixedCostStrategy використовує успадкований default-метод,
+                // а PriorityCostStrategy перевизначає його.
+                System.out.println("   " + strategy.getDetailedDescription(demoTask, defaultHourlyRate));
+            }
+
+            System.out.println("\n2) Множинна реалізація: Інтерфейс Reportable:");
+            Reportable[] reportables = tasks;
+            for (Reportable r : reportables) {
+                if (r != null) {
+                    r.printReport(); // виклик default-методу з Reportable
+                }
+            }
+
+            System.out.println("\n3) Множинна реалізація: Інтерфейс Comparable<Task> (природне сортування):");
+            // Фільтруємо null перед Arrays.sort
+            Task[] nonNullTasks = Arrays.stream(tasks)
+                                        .filter(t -> t != null)
+                                        .toArray(Task[]::new);
+            Arrays.sort(nonNullTasks); // використовує compareTo із Task
+            System.out.println("Масив після сортування через Arrays.sort() (Comparable<Task>):");
+            for (Task t : nonNullTasks) {
+                System.out.printf("   * %.1f год — %s (%s)\n", t.getEstimatedHours(), t.getName(), t.getAssignee());
+            }
+
+            // --- РІВЕНЬ 3. Високий: Паттерн Strategy & зміна стратегії в Runtime ---
+            System.out.println("\n--- Рівень 3: Паттерн Strategy (зміна поведінки об'єкта в Runtime) ---");
+            System.out.println("Початкова стратегія завдання: " + demoTask.getCostStrategy().getStrategyName());
+            System.out.printf("   Початкова вартість: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
+
+            System.out.println("\n-> Динамічно перемикаємо стратегію на FixedCostStrategy в runtime...");
+            demoTask.setCostStrategy(new FixedCostStrategy());
+            System.out.println("Нова активна стратегія: " + demoTask.getCostStrategy().getStrategyName());
+            System.out.printf("   Оновлена вартість без створення нового об'єкта: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
+
+            System.out.println("\n-> Динамічно перемикаємо стратегію на VolumeDiscountCostStrategy в runtime...");
+            demoTask.setCostStrategy(new VolumeDiscountCostStrategy());
+            System.out.println("Нова активна стратегія: " + demoTask.getCostStrategy().getStrategyName());
+            System.out.printf("   Оновлена вартість зі знижкою на тривалість: $%.2f\n", demoTask.calculateCost(defaultHourlyRate));
+
+            System.out.println("\n=======================================================");
+
         } catch (NegativeArraySizeException e) {
             System.out.println("❌ Розмір масиву не може бути від'ємним!");
         } catch (InputMismatchException e) {
             System.out.println("❌ Помилка: замість кількості завдань введено некоректні дані.");
+        } catch (TaskDomainException e) {
+            System.out.println("❌ Доменна помилка: " + e.getMessage());
         } finally {
             System.out.println("\n[Система]: Закриття потоку введення. Роботу завершено.");
             scanner.close();

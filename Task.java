@@ -1,13 +1,32 @@
 import java.util.Objects;
 
-public class Task {
+/**
+ * Доменна сутність завдання в системі (ЛР 1-4).
+ * Реалізує множинне успадкування інтерфейсів (Рівень 2):
+ * - Reportable: бізнес-поведінка генерації звітів;
+ * - Comparable<Task>: системна поведінка порівняння та сортування за часом виконання.
+ *
+ * Виступає контекстним класом для паттерна Strategy (Рівень 3),
+ * делегуючи розрахунок вартості інтерфейсу CostCalculationStrategy
+ * і підтримуючи динамічну зміну стратегії в runtime.
+ */
+public class Task implements Reportable, Comparable<Task> {
     private String name;
     private String assignee;
     private int priority;
     private double estimatedHours;
 
-    // Конструктор з валідацією параметрів (ЛР 2 та ЛР 3)
+    // Паттерн Strategy: посилання на поточну стратегію ціноутворення
+    private CostCalculationStrategy costStrategy;
+
+    // Базовий конструктор (ЛР 2-3) з підстановкою стратегії за замовчуванням
     public Task(String name, String assignee, int priority, double estimatedHours) 
+           throws InvalidPriorityException, InvalidTimeException {
+        this(name, assignee, priority, estimatedHours, new PriorityCostStrategy());
+    }
+
+    // Розширений конструктор із можливістю задання стратегії ціноутворення (ЛР 4)
+    public Task(String name, String assignee, int priority, double estimatedHours, CostCalculationStrategy costStrategy)
            throws InvalidPriorityException, InvalidTimeException {
         
         // Валідація пріоритету (ЛР 3: 1 - Високий, 2 - Середній, 3 - Низький)
@@ -20,10 +39,15 @@ public class Task {
             throw new InvalidTimeException("Оцінений час має бути більшим за 0", estimatedHours);
         }
 
+        if (costStrategy == null) {
+            throw new IllegalArgumentException("Стратегія розрахунку вартості не може бути null");
+        }
+
         this.name = name;
         this.assignee = assignee;
         this.priority = priority;
         this.estimatedHours = estimatedHours;
+        this.costStrategy = costStrategy;
     }
 
     // Геттери
@@ -43,7 +67,34 @@ public class Task {
         return estimatedHours;
     }
 
-    // Отримання мітки пріоритету (бізнес-логіка з ЛР 1)
+    // Управління стратегією ціноутворення (Паттерн Strategy - Рівень 3)
+    public CostCalculationStrategy getCostStrategy() {
+        return costStrategy;
+    }
+
+    /**
+     * Динамічна зміна стратегії розрахунку вартості під час виконання програми (Runtime).
+     *
+     * @param costStrategy нова стратегія ціноутворення
+     */
+    public void setCostStrategy(CostCalculationStrategy costStrategy) {
+        if (costStrategy == null) {
+            throw new IllegalArgumentException("Стратегія розрахунку вартості не може бути null");
+        }
+        this.costStrategy = costStrategy;
+    }
+
+    /**
+     * Делегування розрахунку вартості поточній стратегії (Паттерн Strategy).
+     *
+     * @param hourlyRate базова ставка за годину
+     * @return розрахована вартість
+     */
+    public double calculateCost(double hourlyRate) {
+        return this.costStrategy.calculateCost(this, hourlyRate);
+    }
+
+    // Отримання текстового опису пріоритету (бізнес-логіка з ЛР 1)
     public String getPriorityLabel() {
         switch (priority) {
             case 1:
@@ -57,36 +108,42 @@ public class Task {
         }
     }
 
-    // Розрахунок вартості завдання з урахуванням коефіцієнта терміновості (бізнес-логіка з ЛР 1)
+    // Методи зворотної сумісності з ЛР 1-3
     public double calculateBaseCost(double hourlyRate) {
-        if (hourlyRate < 0) {
-            throw new IllegalArgumentException("Годинна ставка не може бути від'ємною");
+        if (hourlyRate <= 0) {
+            throw new IllegalArgumentException("Годинна ставка має бути більшою за 0");
         }
         return estimatedHours * hourlyRate;
     }
 
     public double calculateFinalCost(double hourlyRate) {
-        double baseCost = calculateBaseCost(hourlyRate);
-        switch (priority) {
-            case 1:
-                return baseCost * 1.20; // 20% націнки за терміновість
-            case 2:
-                return baseCost;        // Стандартна вартість
-            case 3:
-                return baseCost * 0.90; // 10% знижки за нетерміновість
-            default:
-                return baseCost;
-        }
+        return calculateCost(hourlyRate);
     }
 
-    // Перевизначення toString() (ЛР 1-3)
+    // Реалізація інтерфейсу Reportable (Рівень 2)
+    @Override
+    public String generateSummary() {
+        return String.format("[ЗВІТ ЗАВДАННЯ] '%s' | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Стратегія: %s",
+                name, assignee, estimatedHours, getPriorityLabel(), costStrategy.getStrategyName());
+    }
+
+    // Реалізація інтерфейсу Comparable<Task> (Рівень 2) для природного сортування за часом
+    @Override
+    public int compareTo(Task other) {
+        if (other == null) {
+            return 1;
+        }
+        return Double.compare(this.estimatedHours, other.estimatedHours);
+    }
+
+    // Перевизначення toString() (ЛР 1-4)
     @Override
     public String toString() {
-        return String.format("Завдання: '%s' | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год", 
-                             name, assignee, priority, getPriorityLabel(), estimatedHours);
+        return String.format("Завдання: '%s' | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
+                             name, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
     }
 
-    // Перевизначення equals() для пошуку цілого об'єкта (ЛР 2 та ЛР 3)
+    // Перевизначення equals() для порівняння об'єктів (ЛР 2-4)
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -94,7 +151,6 @@ public class Task {
         
         Task other = (Task) obj;
         
-        // Вважаємо завдання однаковими, якщо збігаються назва, виконавець і пріоритет.
         return this.priority == other.priority &&
                Objects.equals(this.name, other.name) &&
                Objects.equals(this.assignee, other.assignee);
