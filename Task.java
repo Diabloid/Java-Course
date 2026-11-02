@@ -2,30 +2,39 @@ import java.util.Objects;
 import java.util.List;
 import java.util.ArrayList;
 
-// Доменна сутність завдання (Суб'єкт для паттерна Observer, Рівень 2)
-public class Task implements Reportable, Comparable<Task> {
+// Базовий абстрактний запечатаний клас завдання (ЛР 6: Рівень 1-3, sealed hierarchy)
+public abstract sealed class Task implements Reportable, Comparable<Task> 
+       permits DevelopmentTask, DocumentationTask, LegacyTaskAdapter {
+    
+    // Статичний прапорець для демонстрації ланцюжка викликів конструкторів (Рівень 2)
+    public static boolean enableConstructorLogging = false;
+
     private String name;
     private String assignee;
     private int priority;
     private double estimatedHours;
     private String status = "NEW";
 
-    // Паттерн Strategy (ЛР 4)
+    // Паттерн Strategy (композиція: Task "має" стратегію, а не "є" нею)
     private CostCalculationStrategy costStrategy;
 
-    // Паттерн Observer: список підписників (Рівень 2)
+    // Паттерн Observer: список підписників (композиція: Task "має" підписників)
     private final List<TaskObserver> observers = new ArrayList<>();
 
-    // Базовий конструктор (ЛР 2-3)
+    // Перевантажений конструктор з делегуванням через this(...) (Рівень 2)
     public Task(String name, String assignee, int priority, double estimatedHours) 
            throws InvalidPriorityException, InvalidTimeException {
         this(name, assignee, priority, estimatedHours, new PriorityCostStrategy());
     }
 
-    // Розширений конструктор зі стратегією (ЛР 4)
+    // Базовий конструктор із повною ініціалізацією
     public Task(String name, String assignee, int priority, double estimatedHours, CostCalculationStrategy costStrategy)
            throws InvalidPriorityException, InvalidTimeException {
         
+        if (enableConstructorLogging) {
+            System.out.println("   [Constructor Task] 1. Ініціалізація базового класу Task: name='" + name + "'");
+        }
+
         // Валідація пріоритету (ЛР 3)
         if (priority < 1 || priority > 3) {
             throw new InvalidPriorityException("Пріоритет має бути від 1 до 3", priority);
@@ -47,7 +56,11 @@ public class Task implements Reportable, Comparable<Task> {
         this.costStrategy = costStrategy;
     }
 
-    // Геттери
+    // Абстрактні методи (Рівень 2): кожен підклас зобов'язаний надати власну поведінку
+    public abstract String getTaskType();
+    public abstract String getExecutionDetails();
+
+    // Геттери спільних полів
     public String getName() {
         return name;
     }
@@ -68,30 +81,30 @@ public class Task implements Reportable, Comparable<Task> {
         return status;
     }
 
-    // Управління спостерігачами (Паттерн Observer - Рівень 2)
-    public void attach(TaskObserver observer) {
+    // Управління спостерігачами (Паттерн Observer)
+    public final void attach(TaskObserver observer) {
         if (observer != null && !observers.contains(observer)) {
             observers.add(observer);
         }
     }
 
-    public void detach(TaskObserver observer) {
+    public final void detach(TaskObserver observer) {
         observers.remove(observer);
     }
 
-    protected void notifyObservers(String changeType, String details) {
+    protected final void notifyObservers(String changeType, String details) {
         for (TaskObserver observer : observers) {
             observer.onTaskUpdated(this, changeType, details);
         }
     }
 
-    // Зміна статусу завдання зі сповіщенням підписників (Рівень 2)
+    // Зміна статусу завдання зі сповіщенням підписників
     public void setStatus(String status) {
         this.status = status;
         notifyObservers("STATUS_CHANGED", "Новий статус: " + status);
     }
 
-    // Зміна пріоритету зі сповіщенням підписників (Рівень 2)
+    // Зміна пріоритету зі сповіщенням підписників
     public void setPriority(int priority) throws InvalidPriorityException {
         if (priority < 1 || priority > 3) {
             throw new InvalidPriorityException("Пріоритет має бути від 1 до 3", priority);
@@ -104,7 +117,7 @@ public class Task implements Reportable, Comparable<Task> {
         return costStrategy;
     }
 
-    // Зміна стратегії в runtime зі сповіщенням підписників (ЛР 4 та ЛР 5)
+    // Зміна стратегії в runtime зі сповіщенням підписників
     public void setCostStrategy(CostCalculationStrategy costStrategy) {
         if (costStrategy == null) {
             throw new IllegalArgumentException("Стратегія розрахунку вартості не може бути null");
@@ -113,12 +126,12 @@ public class Task implements Reportable, Comparable<Task> {
         notifyObservers("STRATEGY_CHANGED", "Встановлено стратегію: " + costStrategy.getStrategyName());
     }
 
-    // Делегування розрахунку вартості стратегії (ЛР 4)
-    public double calculateCost(double hourlyRate) {
+    // final метод: підкласи не повинні порушувати делегування розрахунку вартості стратегії (Рівень 2)
+    public final double calculateCost(double hourlyRate) {
         return this.costStrategy.calculateCost(this, hourlyRate);
     }
 
-    // Текстовий опис пріоритету (з ЛР 1)
+    // Текстовий опис пріоритету
     public String getPriorityLabel() {
         switch (priority) {
             case 1:
@@ -146,11 +159,11 @@ public class Task implements Reportable, Comparable<Task> {
     // Реалізація Reportable (ЛР 4)
     @Override
     public String generateSummary() {
-        return String.format("[ЗВІТ ЗАВДАННЯ] '%s' | Статус: %s | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Стратегія: %s",
-                name, status, assignee, estimatedHours, getPriorityLabel(), costStrategy.getStrategyName());
+        return String.format("[%s] '%s' | Статус: %s | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Деталі: %s",
+                getTaskType().toUpperCase(), name, status, assignee, estimatedHours, getPriorityLabel(), getExecutionDetails());
     }
 
-    // Реалізація Comparable<Task> за часом (ЛР 4)
+    // Реалізація Comparable<Task> за часом
     @Override
     public int compareTo(Task other) {
         if (other == null) {
@@ -162,11 +175,11 @@ public class Task implements Reportable, Comparable<Task> {
     // Перевизначення toString()
     @Override
     public String toString() {
-        return String.format("Завдання: '%s' | Статус: %s | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
-                             name, status, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
+        return String.format("[%s] '%s' | Статус: %s | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
+                             getTaskType(), name, status, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
     }
 
-    // Перевизначення equals() (ЛР 2-3)
+    // Перевизначення equals() та hashCode() через getClass() для збереження симетрії (Рівень 3)
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -175,12 +188,13 @@ public class Task implements Reportable, Comparable<Task> {
         Task other = (Task) obj;
         
         return this.priority == other.priority &&
+               Double.compare(other.estimatedHours, this.estimatedHours) == 0 &&
                Objects.equals(this.name, other.name) &&
                Objects.equals(this.assignee, other.assignee);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, assignee, priority);
+        return Objects.hash(getClass(), name, assignee, priority, estimatedHours);
     }
 }

@@ -1,5 +1,5 @@
-// Адаптер: адаптує LegacyExternalTask до доменної моделі Task (Рівень 3 - Adapter)
-public class LegacyTaskAdapter extends Task {
+// Адаптер: адаптує LegacyExternalTask до доменної моделі Task (ЛР 5: Adapter, ЛР 6: final sealed підклас)
+public final class LegacyTaskAdapter extends Task {
     private final LegacyExternalTask legacyTask;
 
     public LegacyTaskAdapter(LegacyExternalTask legacyTask) 
@@ -11,6 +11,16 @@ public class LegacyTaskAdapter extends Task {
             legacyTask != null ? legacyTask.getDurationInMinutes() / 60.0 : 1.0
         );
         this.legacyTask = legacyTask;
+    }
+
+    @Override
+    public String getTaskType() {
+        return "External Legacy Task";
+    }
+
+    @Override
+    public String getExecutionDetails() {
+        return "Адаптоване зовнішнє завдання зі старої системи (LegacyExternalTask)";
     }
 
     // Трансляція текстового рівня критичності в цілочисельний пріоритет (1-3)
