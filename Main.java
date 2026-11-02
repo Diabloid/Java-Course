@@ -2,11 +2,14 @@ import java.util.Scanner;
 import java.util.Locale;
 import java.util.InputMismatchException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Collection;
+import java.util.Comparator;
 
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in).useLocale(Locale.US);
-        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-6) ===");
+        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-9) ===");
 
         try {
             System.out.print("Скільки завдань ви хочете створити? ");
@@ -112,7 +115,7 @@ public class Main {
             // --- ПОШУК ОБ'ЄКТА ЗА ДОПОМОГОЮ EQUALS (ЛР 2) ---
             System.out.println("\n=== Демонстрація пошуку за equals (ЛР 2) ===");
             try {
-                Task searchTarget = new FeatureTask("Тестове завдання", "Іван", 1, 4.0, "https://github.com/vanya/Java-Course", "General", 3);
+                Task searchTarget = new FeatureTask(999L, "Тестове завдання", "Іван", 1, 4.0, "https://github.com/vanya/Java-Course", "General", 3);
                 System.out.println("Шукаємо зразок: " + searchTarget);
                 boolean found = false;
                 
@@ -189,7 +192,6 @@ public class Main {
 
             // --- Рівень 1: Паттерн Factory ---
             System.out.println("\n--- Рівень 1: Паттерн Factory (CostStrategyFactory) ---");
-            System.out.println("Створення стратегій через фабрику без прямих викликів new:");
             CostCalculationStrategy factoryStrategy1 = CostStrategyFactory.createStrategy("fixed");
             CostCalculationStrategy factoryStrategy2 = CostStrategyFactory.createStrategy("volume");
             System.out.println("✅ Фабрика успішно створила: " + factoryStrategy1.getStrategyName());
@@ -202,7 +204,6 @@ public class Main {
                 System.out.println("Перехоплено очікувану помилку: " + e.getMessage());
             }
 
-            // Динамічна зміна стратегії через фабрику (поєднання Factory + Strategy)
             demoTask.setCostStrategy(CostStrategyFactory.createStrategy("fixed"));
             System.out.printf("Завданню призначено стратегію з фабрики: %s (вартість: $%.2f)\n", 
                     demoTask.getCostStrategy().getStrategyName(), demoTask.calculateCost(defaultHourlyRate));
@@ -212,7 +213,6 @@ public class Main {
             TaskObserver auditLogger = new TaskAuditLogger();
             TaskObserver alertNotifier = new TaskAlertNotifier();
 
-            System.out.println("Підписуємо спостерігачів (TaskAuditLogger та TaskAlertNotifier) на demoTask...");
             demoTask.attach(auditLogger);
             demoTask.attach(alertNotifier);
 
@@ -230,21 +230,13 @@ public class Main {
             LegacyExternalTask externalTask = new LegacyExternalTask(
                     "Оновлення безпеки платіжного шлюзу",
                     "sec-team@fintech.io",
-                    150, // 150 хвилин = 2.5 години
-                    "CRITICAL" // CRITICAL = пріоритет 1
+                    150,
+                    "CRITICAL"
             );
-            System.out.println("Оригінальний зовнішній об'єкт (LegacyExternalTask):");
-            System.out.printf("   Title: '%s' | Dev: %s | Duration: %d хв | Urgency: %s\n",
-                    externalTask.getTitle(), externalTask.getDeveloperEmail(), 
-                    externalTask.getDurationInMinutes(), externalTask.getUrgencyLevel());
 
             Task adaptedTask = new LegacyTaskAdapter(externalTask);
-            System.out.println("\nОб'єкт після адаптації (LegacyTaskAdapter як Task):");
+            System.out.println("Об'єкт після адаптації (LegacyTaskAdapter як Task):");
             System.out.println("   " + adaptedTask);
-            System.out.printf("   -> Оцінений час у годинах: %.1f год.\n", adaptedTask.getEstimatedHours());
-            System.out.printf("   -> Адаптований пріоритет: %d (%s)\n", adaptedTask.getPriority(), adaptedTask.getPriorityLabel());
-            System.out.printf("   -> Розрахунок вартості (ставка $%.2f): $%.2f\n", 
-                    defaultHourlyRate, adaptedTask.calculateCost(defaultHourlyRate));
 
             adaptedTask.attach(auditLogger);
             adaptedTask.attach(alertNotifier);
@@ -257,27 +249,22 @@ public class Main {
             System.out.println("   ДЕМОНСТРАЦІЯ ФУНКЦІОНАЛУ ЛАБОРАТОРНОЇ РОБОТИ №6");
             System.out.println("=======================================================");
 
-            // --- Рівень 1: Базовий рівень (Поліморфізм ієрархії підкласів) ---
+            // --- Рівень 1: Базовий рівень ---
             System.out.println("\n--- Рівень 1 (Базовий): Поліморфізм ієрархії підкласів Task ---");
             Task[] polyTasks = new Task[] {
                 new FeatureTask("Аутентифікація через OAuth2", "Олександр", 1, 12.0, "https://github.com/company/auth", "Security", 8),
-                new BugFixTask("Витік пам'яті в WebSocket з'єднанні", "Марія", 1, 4.0, "https://github.com/company/gateway", "CRITICAL", true),
+                new BugFixTask("Витік пам'яті в WebSocket", "Марія", 1, 4.0, "https://github.com/company/gateway", "CRITICAL", true),
                 new DocumentationTask("API Swagger Specification v2", "Іван", 2, 6.0, "OpenAPI/Markdown", "Frontend Developers"),
                 new LegacyTaskAdapter(new LegacyExternalTask("Міграція старої БД", "db-admin@legacy.org", 180, "HIGH"))
             };
 
-            System.out.println("Виклик перевизначених методів (toString, getTaskType, getExecutionDetails) у циклі:");
             for (Task pt : polyTasks) {
                 System.out.println("• " + pt);
-                System.out.println("  -> Тип завдання (поліморфний виклик): " + pt.getTaskType());
-                System.out.println("  -> Деталі виконання: " + pt.getExecutionDetails());
+                System.out.println("  -> Тип: " + pt.getTaskType() + " | Деталі: " + pt.getExecutionDetails());
             }
 
-            // --- Рівень 2: Середній рівень (Ланцюжок конструкторів, final, Pattern Matching) ---
+            // --- Рівень 2: Ланцюжок конструкторів ---
             System.out.println("\n--- Рівень 2 (Середній): Трирівнева ієрархія та ланцюжок конструкторів ---");
-            System.out.println("Ієрархія: Task (Рівень 1) -> DevelopmentTask (Рівень 2) -> BugFixTask (Рівень 3)");
-            System.out.println("Демонстрація ланцюжка викликів конструкторів (super, this):");
-
             Task.enableConstructorLogging = true;
             BugFixTask demoBug = new BugFixTask(
                 "NPE при обробці порожнього запиту", 
@@ -289,68 +276,114 @@ public class Main {
             );
             Task.enableConstructorLogging = false;
 
-            System.out.println("\nПояснення порядку виконання конструкторів:");
-            System.out.println("1. Викликається конструктор BugFixTask.");
-            System.out.println("2. Першим рядком через super(...) викликається конструктор DevelopmentTask.");
-            System.out.println("3. DevelopmentTask першим рядком через super(...) викликає конструктор базового Task.");
-            System.out.println("4. Task першим рядком неявно викликає конструктор Object().");
-            System.out.println("5. Тіло конструктора Object завершується -> Task -> DevelopmentTask -> BugFixTask.");
-
-            System.out.println("\nЗвернення до специфічних методів підкласу через базове посилання:");
-            Task baseRef = demoBug; // Статичний тип: Task, Динамічний тип: BugFixTask
-            System.out.println("Статичний (оголошений) тип посилання: Task");
-            System.out.println("Динамічний (фактичний) тип об'єкта в heap: " + baseRef.getClass().getSimpleName());
-
-            // Pattern Matching for instanceof (Java 16+)
+            Task baseRef = demoBug;
             if (baseRef instanceof BugFixTask bug) {
-                System.out.println("✅ Об'єкт успішно узгоджено як BugFixTask через pattern matching instanceof!");
-                System.out.println("   Початковий статус hotfix: " + bug.isHotfix());
-                System.out.println("   Викликаємо специфічний метод підкласу bug.markAsHotfix()...");
+                System.out.println("✅ Об'єкт узгоджено як BugFixTask через pattern matching instanceof:");
                 bug.markAsHotfix();
-                System.out.println("   Оновлений статус hotfix: " + bug.isHotfix());
             }
 
-            // --- Рівень 3: Високий рівень (equals/hashCode, симетрія, наслідування vs композиція, Sealed switch) ---
-            System.out.println("\n--- Рівень 3 (Високий): Тестування симетрії в equals() та getClass() vs instanceof ---");
-
-            FeatureTask featA = new FeatureTask("Оптимізація SQL запитів", "Іван", 1, 5.0, "https://repo", "DB", 5);
-            FeatureTask featB = new FeatureTask("Оптимізація SQL запитів", "Іван", 1, 5.0, "https://repo", "DB", 5);
-            BugFixTask bugA = new BugFixTask("Оптимізація SQL запитів", "Іван", 1, 5.0, "https://repo", "CRITICAL");
-
-            System.out.println("1. Порівняння однакових об'єктів одного класу (FeatureTask vs FeatureTask):");
-            System.out.println("   featA.equals(featB): " + featA.equals(featB));
-            System.out.println("   featB.equals(featA): " + featB.equals(featA));
-            System.out.println("   Хеш-коди однакові: " + (featA.hashCode() == featB.hashCode()));
-
-            System.out.println("\n2. Перевірка симетрії між різними підкласами (FeatureTask vs BugFixTask):");
-            System.out.println("   featA.equals(bugA): " + featA.equals(bugA));
-            System.out.println("   bugA.equals(featA): " + bugA.equals(featA));
-            System.out.println("   -> Симетрія строго збережена (false == false) завдяки getClass() замість instanceof!");
-
-            System.out.println("\n3. Наслідування vs Композиція (Аналіз архітектури нашого проєкту):");
-            System.out.println("   • Чому Task МІСТИТЬ CostCalculationStrategy замість наслідування?");
-            System.out.println("     Якби Task наслідував FixedCostStrategy або PriorityCostStrategy, ми б не змогли");
-            System.out.println("     динамічно перемикати стратегію ціноутворення під час виконання програми (setCostStrategy),");
-            System.out.println("     а створення нових комбінацій призвело б до вибухового множення класів.");
-            System.out.println("   • Чому Task МІСТИТЬ List<TaskObserver>?");
-            System.out.println("     Task 'має' спостерігачів (has-a). Наслідування від логера порушило б принцип єдиної відповідальності.");
-
-            // Самостійне опрацювання: Sealed класи + Pattern Matching у Switch (Java 21+)
-            System.out.println("\n4. Самостійне опрацювання: Sealed Hierarchy + Pattern Matching у switch (Java 21+):");
-            System.out.println("   Запечатана ієрархія гарантує компілятору вичерпність (exhaustive checking):");
+            // --- Рівень 3: Sealed switch ---
+            System.out.println("\n--- Рівень 3 (Високий): Sealed Hierarchy + Pattern Matching у switch (Java 21+) ---");
             for (Task task : polyTasks) {
                 String description = switch (task) {
-                    case BugFixTask b -> String.format("🐛 [Дефект] Рівень: %s | Хотфікс: %s | URL: %s", 
-                                            b.getSeverity(), b.isHotfix() ? "ТАК" : "НІ", b.getRepositoryUrl());
-                    case FeatureTask f -> String.format("✨ [Нова фіча] Модуль: %s | Оцінка: %d SP | URL: %s", 
-                                            f.getModuleName(), f.getStoryPoints(), f.getRepositoryUrl());
-                    case DocumentationTask d -> String.format("📚 [Документація] Формат: %s | Для кого: %s", 
-                                            d.getDocFormat(), d.getTargetAudience());
-                    case LegacyTaskAdapter l -> String.format("🔌 [Legacy Адаптер] Зовнішнє завдання: %s", 
-                                            l.getLegacyTask().getTitle());
+                    case BugFixTask b -> String.format("🐛 [Дефект] Рівень: %s | Хотфікс: %s", b.getSeverity(), b.isHotfix() ? "ТАК" : "НІ");
+                    case FeatureTask f -> String.format("✨ [Нова фіча] Модуль: %s | Оцінка: %d SP", f.getModuleName(), f.getStoryPoints());
+                    case DocumentationTask d -> String.format("📚 [Документація] Формат: %s | Для кого: %s", d.getDocFormat(), d.getTargetAudience());
+                    case LegacyTaskAdapter l -> String.format("🔌 [Legacy Адаптер] Зовнішнє завдання: %s", l.getLegacyTask().getTitle());
                 };
                 System.out.println("   " + description);
             }
+
+            // =========================================================================
+            // --- ДЕМОНСТРАЦІЯ ЛР 7-9: ТИПІЗОВАНИЙ CRUD-СЕРВІС, КОЛЕКЦІЇ, СОРТУВАННЯ ---
+            // =========================================================================
+            System.out.println("\n=======================================================");
+            System.out.println("   ДЕМОНСТРАЦІЯ ФУНКЦІОНАЛУ ЛАБОРАТОРНОЇ РОБОТИ №7-9");
+            System.out.println("=======================================================");
+
+            // --- Рівень 1 (Базовий): Універсальний CRUDService<T> для сутності Project ---
+            System.out.println("\n--- Рівень 1 (Базовий): Універсальний InMemoryCrudService для сутності Project ---");
+            CRUDService<Project> projectService = new InMemoryCrudService<>();
+
+            System.out.println("1) Додавання нових сутностей (save):");
+            Project p1 = new Project(1L, "Портал відділення коледжу", "Воронов", 12000.0);
+            Project p2 = new Project(2L, "AI Game Master (Диплом)", "Ваня", 35000.0);
+            projectService.save(p1);
+            projectService.save(p2);
+            System.out.println("   Успішно збережено: " + p1);
+            System.out.println("   Успішно збережено: " + p2);
+
+            System.out.println("\n2) Оновлення наявної сутності за тим самим ID (id=1, оновлено назву та бюджет):");
+            Project p1Updated = new Project(1L, "Портал відділення коледжу v2.0", "Воронов", 16000.0);
+            projectService.save(p1Updated);
+            System.out.println("   Сутність після оновлення: " + projectService.findById(1L));
+            System.out.println("   Кількість сутностей у сховищі не змінилася: " + ((InMemoryCrudService<Project>) projectService).count());
+
+            System.out.println("\n3) Видалення (успішне та неуспішне):");
+            boolean deletedSuccess = projectService.delete(2L);
+            boolean deletedFail = projectService.delete(999L);
+            System.out.println("   Видалення існуючого ID=2: " + deletedSuccess + " (очікувано: true)");
+            System.out.println("   Видалення неіснуючого ID=999: " + deletedFail + " (очікувано: false)");
+
+            System.out.println("\n4) Пошук неіснуючого ID з обробкою EntityNotFoundException:");
+            try {
+                projectService.findById(999L);
+            } catch (EntityNotFoundException e) {
+                System.out.println("   ✅ Перехоплено виняток: " + e.getMessage() + " [ID=" + e.getId() + "]");
+            }
+
+            // --- Рівень 2 (Середній): Специфічний TaskService, вторинне сортування та збереження сховища ---
+            System.out.println("\n--- Рівень 2 (Середній): TaskService, первинне та вторинне сортування ---");
+            TaskService taskService = new TaskServiceImpl();
+
+            // Створюємо щонайменше 3 записи, два з яких мають однакове ім'я (для перевірки вторинного сортування)
+            Task t1 = new FeatureTask(101L, "Рефакторинг архітектури", "Ваня", 1, 6.0, "https://repo/core", "Core", 5);
+            Task t2 = new BugFixTask(102L, "Рефакторинг архітектури", "Петро", 2, 2.5, "https://repo/core", "MAJOR");
+            Task t3 = new DocumentationTask(103L, "Аналіз вимог", "Олена", 3, 4.0, "Markdown", "Devs");
+
+            taskService.save(t1);
+            taskService.save(t2);
+            taskService.save(t3);
+
+            System.out.println("Початковий стан сховища (порядок додавання у LinkedHashMap):");
+            for (Task t : ((InMemoryCrudService<Task>) taskService).findAll()) {
+                System.out.printf("   • ID=%d | '%s' | Час: %.1f год | %s\n", t.getId(), t.getName(), t.getEstimatedHours(), t.getTaskType());
+            }
+
+            System.out.println("\n1) Сортування лише за назвою (findAllSortedByName):");
+            List<Task> sortedByName = taskService.findAllSortedByName();
+            for (Task t : sortedByName) {
+                System.out.printf("   -> ID=%d | '%s' | Час: %.1f год\n", t.getId(), t.getName(), t.getEstimatedHours());
+            }
+
+            System.out.println("\n2) Вторинне сортування (findAllSortedByNameAndByEstimatedHours):");
+            System.out.println("   (Спочатку за назвою, а при збігу назви — за зростанням оціненого часу)");
+            List<Task> sortedByNameAndHours = taskService.findAllSortedByNameAndByEstimatedHours();
+            for (Task t : sortedByNameAndHours) {
+                System.out.printf("   -> ID=%d | '%s' | Час: %.1f год\n", t.getId(), t.getName(), t.getEstimatedHours());
+            }
+
+            System.out.println("\n3) Перевірка незмінності сховища (immutability of storage):");
+            System.out.println("   Сховище зберегло свій первісний порядок після сортувань:");
+            for (Task t : ((InMemoryCrudService<Task>) taskService).findAll()) {
+                System.out.printf("   • ID=%d | '%s'\n", t.getId(), t.getName());
+            }
+
+            // --- Рівень 3 (Високий): Узагальнене сортування (PECS) та Wildcard printAll ---
+            System.out.println("\n--- Рівень 3 (Високий): Comparator<? super T> та Wildcard Collection<? extends BaseEntity> ---");
+
+            System.out.println("1) Узагальнене сортування findAllSorted за пріоритетом (1 -> 3):");
+            List<Task> sortedByPriority = taskService.findAllSorted(Comparator.comparingInt(Task::getPriority));
+            for (Task t : sortedByPriority) {
+                System.out.printf("   [Пріоритет %d] ID=%d | '%s'\n", t.getPriority(), t.getId(), t.getName());
+            }
+
+            System.out.println("\n2) Виклик утилітного методу printAll(Collection<? extends BaseEntity>):");
+            System.out.println("   Друк колекції Task (коваріантність через wildcard ? extends BaseEntity):");
+            printAll(taskService.findAllSortedByName());
+
+            System.out.println("\n   Друк колекції Project через той самий printAll:");
+            printAll(((InMemoryCrudService<Project>) projectService).findAll());
 
             System.out.println("\n=======================================================");
 
@@ -365,6 +398,17 @@ public class Main {
             scanner.close();
         }
     } // Кінець методу main
+
+    // Утилітний метод друку сутностей з використанням wildcard <? extends BaseEntity> (ЛР 7-9: Рівень 3)
+    public static void printAll(Collection<? extends BaseEntity> items) {
+        if (items == null || items.isEmpty()) {
+            System.out.println("   [Колекція порожня]");
+            return;
+        }
+        for (BaseEntity item : items) {
+            System.out.println("   📌 " + item);
+        }
+    }
 
     // Поліморфне створення завдань за типом (ЛР 6)
     public static Task createTaskByType(int typeChoice, String name, String assignee, int priority, double hours) throws TaskDomainException {

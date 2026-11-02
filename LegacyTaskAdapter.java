@@ -1,14 +1,21 @@
-// Адаптер: адаптує LegacyExternalTask до доменної моделі Task (ЛР 5: Adapter, ЛР 6: final sealed підклас)
+// Адаптер: адаптує LegacyExternalTask до доменної моделі Task (ЛР 5: Adapter, ЛР 6: final sealed, ЛР 7-9: BaseEntity)
 public final class LegacyTaskAdapter extends Task {
     private final LegacyExternalTask legacyTask;
 
     public LegacyTaskAdapter(LegacyExternalTask legacyTask) 
            throws InvalidPriorityException, InvalidTimeException {
+        this(Task.getNextAutoId(), legacyTask);
+    }
+
+    public LegacyTaskAdapter(long id, LegacyExternalTask legacyTask) 
+           throws InvalidPriorityException, InvalidTimeException {
         super(
+            id,
             legacyTask != null ? legacyTask.getTitle() : "Без назви",
             legacyTask != null ? legacyTask.getDeveloperEmail() : "Не призначено",
             mapUrgencyToPriority(legacyTask != null ? legacyTask.getUrgencyLevel() : "NORMAL"),
-            legacyTask != null ? legacyTask.getDurationInMinutes() / 60.0 : 1.0
+            legacyTask != null ? legacyTask.getDurationInMinutes() / 60.0 : 1.0,
+            new PriorityCostStrategy()
         );
         this.legacyTask = legacyTask;
     }
@@ -23,7 +30,6 @@ public final class LegacyTaskAdapter extends Task {
         return "Адаптоване зовнішнє завдання зі старої системи (LegacyExternalTask)";
     }
 
-    // Трансляція текстового рівня критичності в цілочисельний пріоритет (1-3)
     private static int mapUrgencyToPriority(String urgency) {
         if (urgency == null) return 2;
         switch (urgency.trim().toUpperCase()) {
