@@ -6,7 +6,7 @@ import java.util.Arrays;
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in).useLocale(Locale.US);
-        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-5) ===");
+        System.out.println("=== Трекер Завдань (Комплексний проєкт: ЛР 1-6) ===");
 
         try {
             System.out.print("Скільки завдань ви хочете створити? ");
@@ -18,6 +18,15 @@ public class Main {
             for (int i = 0; i < count; i++) {
                 System.out.println("\n--- Введення завдання #" + (i + 1) + " ---");
                 try {
+                    System.out.print("Тип (1 - Нова фіча, 2 - Багфікс, 3 - Документація) [1]: ");
+                    String typeInput = scanner.nextLine().trim();
+                    int typeChoice = 1;
+                    if (!typeInput.isEmpty()) {
+                        try {
+                            typeChoice = Integer.parseInt(typeInput);
+                        } catch (NumberFormatException ignored) {}
+                    }
+
                     System.out.print("Назва: ");
                     String name = scanner.nextLine().trim();
                     
@@ -31,7 +40,7 @@ public class Main {
                     double hours = scanner.nextDouble();
                     scanner.nextLine(); // Очищення буфера після введення чисел
 
-                    tasks[i] = createTaskWithLogging(name, assignee, priority, hours);
+                    tasks[i] = createTaskByType(typeChoice, name, assignee, priority, hours);
                     System.out.println("✅ Успішно додано: " + tasks[i]);
 
                 } catch (InputMismatchException e) {
@@ -100,12 +109,11 @@ public class Main {
                 if (t != null) System.out.println(t);
             }
 
-            // --- ТЕСТУВАННЯ ЛІНІЙНОГО ПОШУКУ (ЛР 2 & ЛР 3) ---
-            System.out.println("\n=== Тестування лінійного пошуку (ЛР 2-3) ===");
-            System.out.println("Шукаємо завдання з назвою 'Тест', виконавцем 'Ваня' та пріоритетом 1...");
-            
+            // --- ПОШУК ОБ'ЄКТА ЗА ДОПОМОГОЮ EQUALS (ЛР 2) ---
+            System.out.println("\n=== Демонстрація пошуку за equals (ЛР 2) ===");
             try {
-                Task searchTarget = new Task("Тест", "Ваня", 1, 1.0);
+                Task searchTarget = new FeatureTask("Тестове завдання", "Іван", 1, 4.0, "https://github.com/vanya/Java-Course", "General", 3);
+                System.out.println("Шукаємо зразок: " + searchTarget);
                 boolean found = false;
                 
                 for (int i = 0; i < tasks.length; i++) {
@@ -128,9 +136,9 @@ public class Main {
             // =========================================================================
             System.out.println("\n=== ДЕМОНСТРАЦІЯ ЛАБОРАТОРНОЇ РОБОТИ №4 ===");
 
-            Task demoTask = (tasks.length > 0)
-                    ? Arrays.stream(tasks).filter(t -> t != null).max((t1, t2) -> Double.compare(t1.getEstimatedHours(), t2.getEstimatedHours())).orElse(new Task("Демонстраційна фіча", "Архітектор", 1, 6.0))
-                    : new Task("Демонстраційна фіча", "Архітектор", 1, 6.0);
+            Task demoTask = (tasks.length > 0 && tasks[0] != null)
+                    ? tasks[0]
+                    : new FeatureTask("Розробка REST API для аутентифікації", "Архітектор", 1, 6.0, "https://github.com/vanya/Java-Course", "Auth", 5);
 
             // Поліморфізм інтерфейсу CostCalculationStrategy (створено через Factory з ЛР 5)
             System.out.println("\n--- Рівень 1 (ЛР 4): Поліморфізм інтерфейсу CostCalculationStrategy ---");
@@ -219,7 +227,6 @@ public class Main {
 
             // --- Рівень 3: Паттерн Adapter ---
             System.out.println("\n--- Рівень 3: Паттерн Adapter (Інтеграція стороннього Legacy API) ---");
-            // Моделюємо сторонній об'єкт із несумісним API (хвилини замість годин, "CRITICAL" замість int 1)
             LegacyExternalTask externalTask = new LegacyExternalTask(
                     "Оновлення безпеки платіжного шлюзу",
                     "sec-team@fintech.io",
@@ -231,7 +238,6 @@ public class Main {
                     externalTask.getTitle(), externalTask.getDeveloperEmail(), 
                     externalTask.getDurationInMinutes(), externalTask.getUrgencyLevel());
 
-            // Адаптуємо сторонній об'єкт до нашої моделі Task
             Task adaptedTask = new LegacyTaskAdapter(externalTask);
             System.out.println("\nОб'єкт після адаптації (LegacyTaskAdapter як Task):");
             System.out.println("   " + adaptedTask);
@@ -240,11 +246,111 @@ public class Main {
             System.out.printf("   -> Розрахунок вартості (ставка $%.2f): $%.2f\n", 
                     defaultHourlyRate, adaptedTask.calculateCost(defaultHourlyRate));
 
-            // Перевіряємо інтеграцію адаптованого завдання з паттерном Observer
-            System.out.println("\nТестуємо спостереження за адаптованим завданням:");
             adaptedTask.attach(auditLogger);
             adaptedTask.attach(alertNotifier);
             adaptedTask.setStatus("RESOLVED");
+
+            // =========================================================================
+            // --- ДЕМОНСТРАЦІЯ ЛР 6: ІЄРАРХІЯ КЛАСІВ ТА НАСЛІДУВАННЯ ---
+            // =========================================================================
+            System.out.println("\n=======================================================");
+            System.out.println("   ДЕМОНСТРАЦІЯ ФУНКЦІОНАЛУ ЛАБОРАТОРНОЇ РОБОТИ №6");
+            System.out.println("=======================================================");
+
+            // --- Рівень 1: Базовий рівень (Поліморфізм ієрархії підкласів) ---
+            System.out.println("\n--- Рівень 1 (Базовий): Поліморфізм ієрархії підкласів Task ---");
+            Task[] polyTasks = new Task[] {
+                new FeatureTask("Аутентифікація через OAuth2", "Олександр", 1, 12.0, "https://github.com/company/auth", "Security", 8),
+                new BugFixTask("Витік пам'яті в WebSocket з'єднанні", "Марія", 1, 4.0, "https://github.com/company/gateway", "CRITICAL", true),
+                new DocumentationTask("API Swagger Specification v2", "Іван", 2, 6.0, "OpenAPI/Markdown", "Frontend Developers"),
+                new LegacyTaskAdapter(new LegacyExternalTask("Міграція старої БД", "db-admin@legacy.org", 180, "HIGH"))
+            };
+
+            System.out.println("Виклик перевизначених методів (toString, getTaskType, getExecutionDetails) у циклі:");
+            for (Task pt : polyTasks) {
+                System.out.println("• " + pt);
+                System.out.println("  -> Тип завдання (поліморфний виклик): " + pt.getTaskType());
+                System.out.println("  -> Деталі виконання: " + pt.getExecutionDetails());
+            }
+
+            // --- Рівень 2: Середній рівень (Ланцюжок конструкторів, final, Pattern Matching) ---
+            System.out.println("\n--- Рівень 2 (Середній): Трирівнева ієрархія та ланцюжок конструкторів ---");
+            System.out.println("Ієрархія: Task (Рівень 1) -> DevelopmentTask (Рівень 2) -> BugFixTask (Рівень 3)");
+            System.out.println("Демонстрація ланцюжка викликів конструкторів (super, this):");
+
+            Task.enableConstructorLogging = true;
+            BugFixTask demoBug = new BugFixTask(
+                "NPE при обробці порожнього запиту", 
+                "Дмитро", 
+                2, 
+                3.0, 
+                "https://github.com/company/backend", 
+                "MAJOR"
+            );
+            Task.enableConstructorLogging = false;
+
+            System.out.println("\nПояснення порядку виконання конструкторів:");
+            System.out.println("1. Викликається конструктор BugFixTask.");
+            System.out.println("2. Першим рядком через super(...) викликається конструктор DevelopmentTask.");
+            System.out.println("3. DevelopmentTask першим рядком через super(...) викликає конструктор базового Task.");
+            System.out.println("4. Task першим рядком неявно викликає конструктор Object().");
+            System.out.println("5. Тіло конструктора Object завершується -> Task -> DevelopmentTask -> BugFixTask.");
+
+            System.out.println("\nЗвернення до специфічних методів підкласу через базове посилання:");
+            Task baseRef = demoBug; // Статичний тип: Task, Динамічний тип: BugFixTask
+            System.out.println("Статичний (оголошений) тип посилання: Task");
+            System.out.println("Динамічний (фактичний) тип об'єкта в heap: " + baseRef.getClass().getSimpleName());
+
+            // Pattern Matching for instanceof (Java 16+)
+            if (baseRef instanceof BugFixTask bug) {
+                System.out.println("✅ Об'єкт успішно узгоджено як BugFixTask через pattern matching instanceof!");
+                System.out.println("   Початковий статус hotfix: " + bug.isHotfix());
+                System.out.println("   Викликаємо специфічний метод підкласу bug.markAsHotfix()...");
+                bug.markAsHotfix();
+                System.out.println("   Оновлений статус hotfix: " + bug.isHotfix());
+            }
+
+            // --- Рівень 3: Високий рівень (equals/hashCode, симетрія, наслідування vs композиція, Sealed switch) ---
+            System.out.println("\n--- Рівень 3 (Високий): Тестування симетрії в equals() та getClass() vs instanceof ---");
+
+            FeatureTask featA = new FeatureTask("Оптимізація SQL запитів", "Іван", 1, 5.0, "https://repo", "DB", 5);
+            FeatureTask featB = new FeatureTask("Оптимізація SQL запитів", "Іван", 1, 5.0, "https://repo", "DB", 5);
+            BugFixTask bugA = new BugFixTask("Оптимізація SQL запитів", "Іван", 1, 5.0, "https://repo", "CRITICAL");
+
+            System.out.println("1. Порівняння однакових об'єктів одного класу (FeatureTask vs FeatureTask):");
+            System.out.println("   featA.equals(featB): " + featA.equals(featB));
+            System.out.println("   featB.equals(featA): " + featB.equals(featA));
+            System.out.println("   Хеш-коди однакові: " + (featA.hashCode() == featB.hashCode()));
+
+            System.out.println("\n2. Перевірка симетрії між різними підкласами (FeatureTask vs BugFixTask):");
+            System.out.println("   featA.equals(bugA): " + featA.equals(bugA));
+            System.out.println("   bugA.equals(featA): " + bugA.equals(featA));
+            System.out.println("   -> Симетрія строго збережена (false == false) завдяки getClass() замість instanceof!");
+
+            System.out.println("\n3. Наслідування vs Композиція (Аналіз архітектури нашого проєкту):");
+            System.out.println("   • Чому Task МІСТИТЬ CostCalculationStrategy замість наслідування?");
+            System.out.println("     Якби Task наслідував FixedCostStrategy або PriorityCostStrategy, ми б не змогли");
+            System.out.println("     динамічно перемикати стратегію ціноутворення під час виконання програми (setCostStrategy),");
+            System.out.println("     а створення нових комбінацій призвело б до вибухового множення класів.");
+            System.out.println("   • Чому Task МІСТИТЬ List<TaskObserver>?");
+            System.out.println("     Task 'має' спостерігачів (has-a). Наслідування від логера порушило б принцип єдиної відповідальності.");
+
+            // Самостійне опрацювання: Sealed класи + Pattern Matching у Switch (Java 21+)
+            System.out.println("\n4. Самостійне опрацювання: Sealed Hierarchy + Pattern Matching у switch (Java 21+):");
+            System.out.println("   Запечатана ієрархія гарантує компілятору вичерпність (exhaustive checking):");
+            for (Task task : polyTasks) {
+                String description = switch (task) {
+                    case BugFixTask b -> String.format("🐛 [Дефект] Рівень: %s | Хотфікс: %s | URL: %s", 
+                                            b.getSeverity(), b.isHotfix() ? "ТАК" : "НІ", b.getRepositoryUrl());
+                    case FeatureTask f -> String.format("✨ [Нова фіча] Модуль: %s | Оцінка: %d SP | URL: %s", 
+                                            f.getModuleName(), f.getStoryPoints(), f.getRepositoryUrl());
+                    case DocumentationTask d -> String.format("📚 [Документація] Формат: %s | Для кого: %s", 
+                                            d.getDocFormat(), d.getTargetAudience());
+                    case LegacyTaskAdapter l -> String.format("🔌 [Legacy Адаптер] Зовнішнє завдання: %s", 
+                                            l.getLegacyTask().getTitle());
+                };
+                System.out.println("   " + description);
+            }
 
             System.out.println("\n=======================================================");
 
@@ -260,10 +366,18 @@ public class Main {
         }
     } // Кінець методу main
 
-    // Метод createTaskWithLogging з ЛР 3 із проміжним логуванням
-    public static Task createTaskWithLogging(String name, String assignee, int priority, double hours) throws TaskDomainException {
+    // Поліморфне створення завдань за типом (ЛР 6)
+    public static Task createTaskByType(int typeChoice, String name, String assignee, int priority, double hours) throws TaskDomainException {
         try {
-            return new Task(name, assignee, priority, hours);
+            switch (typeChoice) {
+                case 2:
+                    return new BugFixTask(name, assignee, priority, hours, "https://github.com/vanya/Java-Course", "MAJOR");
+                case 3:
+                    return new DocumentationTask(name, assignee, priority, hours, "Markdown", "Developers");
+                case 1:
+                default:
+                    return new FeatureTask(name, assignee, priority, hours, "https://github.com/vanya/Java-Course", "Core", 3);
+            }
         } catch (TaskDomainException e) {
             System.out.println("[LOG SERVER]: Спроба створення некоректного завдання '" + name + "'");
             throw e; 
