@@ -1,6 +1,6 @@
-# Трекер завдань (Task Tracker) — Комплексний проєкт (ЛР 1–6)
+# Трекер завдань (Task Tracker) — Комплексний проєкт (ЛР 1–9)
 
-Консольний Java-застосунок для обліку та управління завданнями, який об'єднує функціонал шести лабораторних робіт в єдину цілісну архітектуру на принципах ООП, наслідування та патернів проєктування GoF.
+Консольний Java-застосунок для обліку та управління завданнями, який об'єднує функціонал лабораторних робіт (ЛР 1–9) в єдину цілісну архітектуру на принципах ООП, узагальнень (Generics), колекцій Java та патернів GoF.
 
 ---
 
@@ -8,267 +8,206 @@
 
 ### 1. Лабораторна робота 1: Основи мови Java та розгалуження
 - Консольне введення даних через `Scanner` (локаль `Locale.US`).
-- Бізнес-логіка розрахунку базової вартості (`estimatedHours * hourlyRate`).
-- Коригування вартості за пріоритетом завдання:
-  - **Пріоритет 1 (Високий / Терміново)**: +20% націнки за терміновість.
-  - **Пріоритет 2 (Середній / Стандарт)**: стандартний тариф.
-  - **Пріоритет 3 (Низький / Не поспішаючи)**: знижка 10%.
-- Форматований вивід інформації та міток пріоритету.
+- Розрахунок вартості за пріоритетом (націнка 20% за терміновість, знижка 10% за низький пріоритет).
 
 ### 2. Лабораторна робота 2: Об'єктно-орієнтована модель, масиви та цикли
-- Інкапсуляція сутності `Task` (назва, виконавець, пріоритет, оцінений час).
-- Збереження колекції завдань у масиві об'єктів `Task[]`.
-- Підрахунок аналітичної статистики (кількість термінових завдань, сумарний час та вартість).
-- Алгоритм сортування масиву методом бульбашки (**Bubble Sort**) за часом виконання (`estimatedHours`).
-- Лінійний пошук завдань із перевизначеним методом `equals()` (порівняння за назвою, виконавцем та пріоритетом).
+- Інкапсуляція сутності `Task`, масив об'єктів `Task[]`.
+- Сортування Bubble Sort за оціненим часом, лінійний пошук через `equals()`.
 
 ### 3. Лабораторна робота 3: Обробка виняткових ситуацій (Exceptions)
-- Власна ієрархія доменних винятків:
-  - `TaskDomainException` — базовий перевіряємий (checked) виняток предметної області.
-  - `InvalidPriorityException` — виняток для некоректного пріоритету (зберігає помилкове значення).
-  - `InvalidTimeException` — виняток для від'ємного або нульового часу (зберігає помилкове значення).
-- Валідація параметрів у конструкторі `Task` із викиданням відповідних винятків.
-- Багаторівнева обробка помилок у `Main.java` (`try-catch-finally`):
-  - Перехоплення `InputMismatchException` та відновлення стану потоку вводу.
-  - Цикл повторного введення даних у разі виникнення помилок.
-  - Метод `createTaskWithLogging` із проміжним логуванням та повторним викиданням помилки (`re-throw`).
-  - Безпечне закриття ресурсів у блоці `finally`.
+- Власна ієрархія доменних винятків (`TaskDomainException`, `InvalidPriorityException`, `InvalidTimeException`).
+- Багаторівнева обробка помилок `try-catch-finally`.
 
 ### 4. Лабораторна робота 4: Реалізація програмних інтерфейсів та патернів ООП
-- **Інтерфейси та поліморфізм**: створення інтерфейсу `CostCalculationStrategy` з трьома реалізаціями (`PriorityCostStrategy`, `FixedCostStrategy`, `VolumeDiscountCostStrategy`).
-- **Default-методи та абстрактні класи**: `default`-метод `getDetailedDescription()`, абстрактний базовий клас `AbstractCostStrategy` для спільної валідації та базових обчислень.
-- **Множинна реалізація інтерфейсів**: клас `Task` реалізує `Reportable` та `Comparable<Task>`.
-- **Паттерн Strategy**: контекст `Task` делегує розрахунок вартості стратегії, підтримуючи зміну стратегії в runtime.
+- Інтерфейс `CostCalculationStrategy` з трьома реалізаціями (Strategy).
+- `default`-метод `getDetailedDescription()`, абстрактний клас `AbstractCostStrategy`.
+- Множинна реалізація інтерфейсів: `Reportable`, `Comparable<Task>`.
 
 ### 5. Лабораторна робота 5: Рефакторинг із застосуванням GoF-патернів
-- **Рівень 1 (Factory)**: Фабрика `CostStrategyFactory.createStrategy(String type)` для усунення прямих зв'язків із конкретними класами стратегій.
-- **Рівень 2 (Observer)**: Інтерфейс `TaskObserver`, суб'єкт `Task` із методами `attach`, `detach`, `notifyObservers`. Підписники `TaskAuditLogger` та `TaskAlertNotifier`.
-- **Рівень 3 (Adapter)**: `LegacyTaskAdapter extends Task` адаптує сторонній клас `LegacyExternalTask` до доменної моделі.
+- **Factory**: `CostStrategyFactory` для створення стратегій розрахунку вартості.
+- **Observer**: `TaskObserver` (`TaskAuditLogger`, `TaskAlertNotifier`) для спостереження за зміною статусу та пріоритету.
+- **Adapter**: `LegacyTaskAdapter extends Task` адаптує сторонній клас `LegacyExternalTask`.
 
 ### 6. Лабораторна робота 6: Ієрархія класів та наслідування
+- Базовий абстрактний клас `Task` за принципом `is-a`.
+- 3-рівнева ієрархія: `Task` -> `DevelopmentTask` -> `BugFixTask` / `FeatureTask` + `DocumentationTask`.
+- Ланцюжок викликів конструкторів (`super`, `this`), модифікатор `final`.
+- Запечатана ієрархія (`sealed`, `permits`) та switch pattern matching (Java 21+).
+
+### 7. Лабораторна робота 7–9: Типізований CRUD-сервіс, колекції та сортування
 - **Рівень 1 (Базовий)**:
-  - Побудовано ієрархію класів за принципом **is-a** («є різновидом»):
-    - `Task` — базовий абстрактний клас із загальними полями (`name`, `assignee`, `priority`, `estimatedHours`, `status`, `costStrategy`, `observers`).
-    - Підкласи містять лише специфічні поля (`private`).
-    - Конструктори підкласів викликають базовий через `super(...)`.
-    - Перевизначено методи `getTaskType()`, `getExecutionDetails()` та `toString()` (через `super.toString()`).
-    - Продемонстровано поліморфізм через масив `Task[]` з об'єктами різних підкласів.
+  - Абстрактний базовий клас `BaseEntity` з незмінним `id` (`final`) та назвою `name`.
+  - Власний виняток `EntityNotFoundException extends RuntimeException` з полем `id`.
+  - Узагальнений інтерфейс `CRUDService<T extends BaseEntity>` з операціями `findById`, `save`, `delete`. Обмеження `<T extends BaseEntity>` гарантує доступ до `getId()` та `getName()`.
+  - Універсальний сервіс `InMemoryCrudService<T extends BaseEntity>`, який без змін працює з будь-якими доменними сутностями (`Task`, `Project`).
+  - Оновлення за `id` без збільшення розміру сховища, перевірка успішного/неуспішного видалення.
 - **Рівень 2 (Середній)**:
-  - **Абстрактний клас**: `Task` зроблено `abstract`, оскільки створення абстрактного неспецифікованого завдання не має бізнес-сенсу.
-  - **Абстрактні методи**: `getTaskType()` та `getExecutionDetails()`, кожен підклас зобов'язаний надати конкретну реалізацію.
-  - **Трирівнева ієрархія**: `Task` (Рівень 1) -> `DevelopmentTask` (Рівень 2) -> `BugFixTask` та `FeatureTask` (Рівень 3).
-  - **Ланцюжок конструкторів**: наочне трасування викликів (`Object` -> `Task` -> `DevelopmentTask` -> `BugFixTask`) з виведенням порядку виконання.
-  - **Делегування конструкторів**: використання `this(...)` для перевантаження конструкторів без дублювання логіки.
-  - **Модифікатор final**:
-    - Для методів: `calculateCost(double hourlyRate)` та методи спостереження у `Task` є `final`, оскільки вони закріплюють делегування патернам Strategy і Observer і не повинні спотворюватися підкласами.
-    - Для класів: `BugFixTask`, `FeatureTask`, `DocumentationTask`, `LegacyTaskAdapter` оголошено `final` як завершені кінцеві класи.
-  - **Звернення до підкласу через базове посилання**: використання `instanceof` із **Pattern Matching** (`if (baseRef instanceof BugFixTask bug) { bug.markAsHotfix(); }`).
+  - Специфічний інтерфейс сутності `TaskService extends CRUDService<Task>` із методом `findAllSortedByNameAndByEstimatedHours()`.
+  - Вторинне сортування через `Comparator.comparing(Task::getName).thenComparingDouble(Task::getEstimatedHours)`.
+  - Методи сортування повертають **нову колекцію** (`new ArrayList<>(...)`), не мутуючи стан внутрішнього сховища.
+  - Порівняльна таблиця колекцій для сховища (`ArrayList`, `HashMap`, `LinkedHashMap`, `TreeMap`).
+  - `equals()` та `hashCode()` у `BaseEntity` перевизначено строго за `id`.
 - **Рівень 3 (Високий)**:
-  - **equals() і hashCode()**: реалізовано з урахуванням специфічних полів.
-  - **Питання симетрії та getClass() vs instanceof**:
-    - Перевірка через `instanceof` у базовому класі порушує симетрію (`base.equals(sub)` повертає `true`, але `sub.equals(base)` повертає `false` через перевірку додаткових полів у підкласі).
-    - Обрано підхід `getClass() == obj.getClass()`, який строго гарантує симетрію (`a.equals(b) == b.equals(a)`) та транзитивність.
-  - **Композиція vs Наслідування**:
-    - `Task` *має* `CostCalculationStrategy` (композиція), а не *є* нею. Наслідування призвело б до комбінаторного вибуху класів (`BugFixPriorityTask`, `BugFixFixedTask`...) і унеможливило б заміну стратегії в runtime (`task.setCostStrategy(...)`).
-    - `Task` *має* `List<TaskObserver>` (композиція), зберігаючи Single Responsibility Principle.
-  - **Самостійне опрацювання (Sealed Classes & Switch Pattern Matching)**:
-    - Запечатана ієрархія: `Task` permits `DevelopmentTask, DocumentationTask, LegacyTaskAdapter`.
-    - `DevelopmentTask` permits `BugFixTask, FeatureTask`.
-    - Компілятор отримує гарантію вичерпності (**exhaustive checking**), що дозволяє використовувати `switch (task)` з pattern matching без блоку `default`.
+  - Узагальнений метод сортування `List<T> findAllSorted(Comparator<? super T> comparator)` (принцип PECS).
+  - `findAllSortedByName()` реалізовано як `default`-метод інтерфейсу `CRUDService<T>`.
+  - Утилітний поліморфний метод `static void printAll(Collection<? extends BaseEntity> items)` із демонстрацією коваріантності дженеріків.
 
 ---
 
-## Діаграма класів ієрархії (Mermaid)
+## Порівняння колекцій для внутрішнього сховища CRUD-сервісу
+
+Для вибору оптимальної структури сховища в `InMemoryCrudService` було проаналізовано 4 структури даних:
+
+| Колекція | Пошук за ID (`findById`) | Додавання/Оновлення (`save`) | Видалення за ID (`delete`) | Отримання відсортованого списку | Порядок ітерації за замовчуванням |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **`ArrayList<T>`** | $O(n)$ (лінійний пошук) | $O(n)$ (перевірка наявності ID) | $O(n)$ (пошук + зсув елементів) | $O(n \log n)$ (вимагає копії + `sort`) | Порядок додавання індексів |
+| **`HashMap<Long, T>`** | **$O(1)$** | **$O(1)$** | **$O(1)$** | $O(n \log n)$ (`values()` + `sort`) | Хаотичний (визначається хешем) |
+| **`LinkedHashMap<Long, T>`** *(Наш вибір)* | **$O(1)$** | **$O(1)$** | **$O(1)$** | $O(n \log n)$ (`values()` + `sort`) | **Детермінований (порядок вставки)** |
+| **`TreeMap<Long, T>`** | $O(\log n)$ (червоно-чорне дерево) | $O(\log n)$ | $O(\log n)$ | $O(n \log n)$ (якщо сортувати не за ID, а за ім'ям) | Сортований строго за ключем ID |
+
+### Обґрунтування вибору `LinkedHashMap`:
+1. Операції `findById`, `save` (додавання або оновлення за ключем) та `delete` виконуються за гарантований константний час **$O(1)$** завдяки хешуванню.
+2. На відміну від звичайного `HashMap`, `LinkedHashMap` зберігає двобічно зв'язаний список записів, що гарантує **передбачуваний, детермінований порядок ітерації (insertion-order)** при виклику `findAll()`.
+3. Використання `TreeMap` було б надлишковим і повільнішим ($O(\log n)$ замість $O(1)$), оскільки сортування в бізнес-вимогах вимагається не за штучним сурогатним ID, а за назвою та іншими бізнес-полями (`name`, `estimatedHours`).
+
+---
+
+## Діаграма класів архітектури ЛР 7–9 (Mermaid)
 
 ```mermaid
 classDiagram
     direction TB
 
-    class Reportable {
-        <<interface>>
-        +generateSummary() String
-        +printReport() void
+    class BaseEntity {
+        <<abstract>>
+        -long id
+        -String name
+        +getId() long
+        +getName() String
+        +setName(String) void
+        +equals(Object) boolean
+        +hashCode() int
     }
 
-    class Comparable~Task~ {
-        <<interface>>
-        +compareTo(Task other) int
+    class Project {
+        -String clientName
+        -double budget
+        +getClientName() String
+        +getBudget() double
     }
 
     class Task {
         <<abstract, sealed>>
-        -String name
         -String assignee
         -int priority
         -double estimatedHours
         -String status
-        -CostCalculationStrategy costStrategy
-        -List~TaskObserver~ observers
         +getTaskType()* String
         +getExecutionDetails()* String
-        +calculateCost(double)* final double
-        +setStatus(String) void
-        +setPriority(int) void
     }
 
-    class DevelopmentTask {
-        <<abstract, sealed>>
-        -String repositoryUrl
-        +getRepositoryUrl() String
-        +setRepositoryUrl(String) void
+    class CRUDService~T extends BaseEntity~ {
+        <<interface>>
+        +findById(long id)* T
+        +save(T entity)* void
+        +delete(long id)* boolean
+        +findAllSorted(Comparator~? super T~)* List~T~
+        +findAllSortedByName() List~T~
     }
 
-    class DocumentationTask {
-        <<final>>
-        -String docFormat
-        -String targetAudience
-        +getDocFormat() String
-        +getTargetAudience() String
+    class TaskService {
+        <<interface>>
+        +findAllSortedByNameAndByEstimatedHours()* List~Task~
     }
 
-    class LegacyTaskAdapter {
-        <<final>>
-        -LegacyExternalTask legacyTask
-        +getLegacyTask() LegacyExternalTask
+    class InMemoryCrudService~T extends BaseEntity~ {
+        #Map~Long, T~ storage
+        +findById(long id) T
+        +save(T entity) void
+        +delete(long id) boolean
+        +findAllSorted(Comparator~? super T~) List~T~
+        +findAll() List~T~
+        +count() int
     }
 
-    class BugFixTask {
-        <<final>>
-        -String severity
-        -boolean isHotfix
-        +getSeverity() String
-        +isHotfix() boolean
-        +markAsHotfix() void
+    class TaskServiceImpl {
+        +findAllSortedByNameAndByEstimatedHours() List~Task~
     }
 
-    class FeatureTask {
-        <<final>>
-        -String moduleName
-        -int storyPoints
-        +getModuleName() String
-        +getStoryPoints() int
-        +setStoryPoints(int) void
-    }
+    BaseEntity <|-- Project
+    BaseEntity <|-- Task
 
-    Reportable <|.. Task
-    Comparable~Task~ <|.. Task
-
-    Task <|-- DevelopmentTask : permits
-    Task <|-- DocumentationTask : permits
-    Task <|-- LegacyTaskAdapter : permits
-
-    DevelopmentTask <|-- BugFixTask : permits
-    DevelopmentTask <|-- FeatureTask : permits
+    CRUDService <|.. InMemoryCrudService
+    CRUDService <|-- TaskService
+    InMemoryCrudService <|-- TaskServiceImpl
+    TaskService <|.. TaskServiceImpl
 ```
-
----
-
-## Структура файлів проєкту
-
-- `Task.java` — базовий абстрактний sealed клас завдання.
-- `DevelopmentTask.java` — проміжний рівень ієрархії для завдань розробки ПЗ (sealed).
-- `BugFixTask.java` — 3-й рівень ієрархії: дефекти, критичність, хотфікси (final).
-- `FeatureTask.java` — 3-й рівень ієрархії: нова функціональність, Story Points (final).
-- `DocumentationTask.java` — 2-й рівень ієрархії: написання документації (final).
-- `LegacyExternalTask.java` — стороння несумісна сутність (Adaptee).
-- `LegacyTaskAdapter.java` — адаптер стороннього завдання під модель `Task` (final).
-- `CostCalculationStrategy.java` — інтерфейс стратегії розрахунку вартості.
-- `AbstractCostStrategy.java` — базовий абстрактний клас стратегій.
-- `PriorityCostStrategy.java`, `FixedCostStrategy.java`, `VolumeDiscountCostStrategy.java` — реалізації стратегій.
-- `CostStrategyFactory.java` — фабрика створення стратегій (GoF Factory).
-- `TaskObserver.java` — інтерфейс підписника (GoF Observer).
-- `TaskAuditLogger.java`, `TaskAlertNotifier.java` — конкретні спостерігачі.
-- `Reportable.java` — інтерфейс звітів із default-методом.
-- `TaskDomainException.java`, `InvalidPriorityException.java`, `InvalidTimeException.java` — доменні винятки.
-- `Main.java` — демонстрація функціоналу всіх лабораторних (ЛР 1–6).
-- `run.bat`, `run.ps1` — скрипти запуску з підтримкою кодування UTF-8.
 
 ---
 
 ## Інструкція із запуску (CLI)
 
-### Швидкий запуск в один клік (з автоматичним налаштуванням UTF-8):
-
-- **Через BAT-файл (працює завжди без обмежень політик безпеки):**
+### Швидкий запуск в один клік:
+- **Через BAT-файл (Windows CMD / Explorer):**
   ```powershell
   .\run.bat
   ```
-- **Через PowerShell-скрипт:**
+- **Через PowerShell:**
   ```powershell
-  .\run.ps1
+  powershell -ExecutionPolicy Bypass -File .\run.ps1
   ```
-  *(Якщо PowerShell блокує скрипти через ExecutionPolicy, виконайте: `powershell -ExecutionPolicy Bypass -File .\run.ps1`)*
-- **Або двічі клацніть на `run.bat` у Провіднику Windows.**
 
 ---
 
-### Ручний запуск у консолі (PowerShell / CMD):
+## Відповіді на контрольні питання до захисту ЛР 7–9
 
-1. Відкрийте термінал у кореневій папці проєкту (гілка `lr6/inheritance` або `main`).
-2. Переведіть консоль у кодування UTF-8:
-   - **PowerShell:**
-     ```powershell
-     chcp 65001
-     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-     [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
-     ```
-   - **CMD:**
-     ```cmd
-     chcp 65001
-     ```
-3. Скомпілюйте всі класи:
-   ```bash
-   javac -encoding UTF-8 *.java
-   ```
-4. Запустіть програму:
-   ```bash
-   java "-Dfile.encoding=UTF-8" Main
-   ```
+### 1. Узагальнення (Generics)
+- **Яку проблему вирішують узагальнення? Коли виявляється помилка типу?**  
+  Дженеріки забезпечують **типобезпеку (type safety)** на етапі компіляції. До їх появи використовувався спільний предок `Object`, що вимагало ручного явного приведення типів `(Task) list.get(i)` і створювало ризик `ClassCastException` у runtime. З дженеріками помилка невідповідності типів виявляється **під час компіляції**.
+- **Чому не можна оголосити CRUDService<long>?**  
+  Параметрами дженеріків у Java можуть бути лише посилальні типи (класи, інтерфейси), оскільки механізм стирання типів (*type erasure*) замінює параметр на `Object` (або верхню межу). Примітив `long` не успадковує `Object`. На практиці використовують обгортку `Long`.
+- **Що означає запис T extends BaseEntity? Які дії стали б неможливими без нього?**  
+  Це верхня межа типу (**upper bound**). Вона гарантує, що `T` є класом `BaseEntity` або його нащадком. Без цього обмеження компілятор вважав би `T` звичайним `Object`, і ми б не змогли всередині сервісу викликати методи `entity.getId()` та `entity.getName()`.
+- **Чому не можна написати new T() або new T[10]?**  
+  Через стирання типів (*type erasure*): під час виконання програми байткод JVM не зберігає точної інформації про тип `T`. JVM не знає, скільки пам'яті виділяти і який конструктор викликати. Сховище реалізують на базі готових колекцій (`Map<Long, T>`, `List<T>`).
+- **Чому List<Task> не можна передати в List<BaseEntity>? Що змінює wildcard?**  
+  Дженеріки в Java є **інваріантними**: навіть якщо `Task extends BaseEntity`, тип `List<Task>` НЕ є нащадком `List<BaseEntity>`. Якби це дозволялося, через посилання `List<BaseEntity>` у список завдань можна було б додати об'єкт `Project`, що зруйнувало б типобезпеку списку завдань. Wildcard `Collection<? extends BaseEntity>` забезпечує **коваріантність** — дозволяє безпечно читати елементи як `BaseEntity`.
+- **Comparator<T> vs Comparator<? super T>:**  
+  Принцип **PECS (Producer Extends, Consumer Super)**: компаратор *споживає* об'єкти (порівнює їх), тому `Comparator<? super T>` дозволяє передати компаратор, оголошений для суперкласу (наприклад, `Comparator<BaseEntity>`), щоб сортувати нащадків `Task`. Це робить метод значно гнучкішим.
 
----
+### 2. Колекції
+- **Складність пошуку за ID: ArrayList vs HashMap:**  
+  - В `ArrayList` — **$O(n)$**, оскільки для знаходження потрібного ID необхідно послідовно перебрати всі елементи списку.
+  - В `HashMap` — **$O(1)$**, оскільки ключ ID хешується і доступ до комірки масиву таблиці відбувається напряму за константний час.
+- **Відмінності HashMap, LinkedHashMap, TreeMap:**  
+  - `HashMap`: найшвидший ($O(1)$), порядок елементів випадковий/невизначений.
+  - `LinkedHashMap`: швидкість $O(1)$, зберігає детермінований **порядок додавання елементів**.
+  - `TreeMap`: швидкість $O(\log n)$, автоматично сортує ключі за їх натуральним порядком або компаратором.
+- **Метод save через Map.put:**  
+  `storage.put(key, value)` працює атомарно: якщо ключа не було — створюється новий запис, якщо ключ був — старе значення перезаписується (оновлення). `put` повертає попереднє значення (або `null`, якщо сутності ще не було).
+- **Чому TreeSet<T> з компаратором за іменем не підходить як основне сховище?**  
+  `TreeSet` використовує результат компаратора замість `equals()` для визначення унікальності. Якщо компаратор порівнює лише за ім'ям, і ми спробуємо зберегти два різних завдання з однаковою назвою `"Refactoring"`, `TreeSet` вважатиме їх дублікатами (`compare == 0`) і друге завдання **просто не збережеться (втрата даних!)**.
+- **Видалення в циклі for-each:**  
+  Виклик `collection.remove()` всередині for-each циклу викидає **`ConcurrentModificationException`**. Безпечно видаляти можна через `Iterator.remove()` або через сучасний метод `collection.removeIf(...)`.
 
-## Відповіді на контрольні питання до захисту ЛР 6
+### 3. Comparable та Comparator
+- **Comparable vs Comparator:**  
+  - `Comparable`: внутрішній інтерфейс сутності з методом `compareTo(T other)`. Визначає **один природний порядок** сортування.
+  - `Comparator`: зовнішній функціональний інтерфейс із методом `compare(T o1, T o2)`. Дозволяє створювати **необмежену кількість довільних стратегій сортування** без зміни коду самої сутності.
+- **Вторинне сортування:**  
+  Використовується метод `thenComparing`:
+  ```java
+  Comparator.comparing(Task::getName).thenComparingDouble(Task::getEstimatedHours);
+  ```
+- **Чому a.getPrice() - b.getPrice() є помилкою?**  
+  Через небезпеку переповнення діапазону (*integer overflow*), а також для чисел із рухомою комою (`double`), де результат різниці може бути `0.4`, що при зведенні до `int` округлиться до `0` і спотворить порядок. Слід використовувати `Double.compare(a, b)` або `Integer.compare(a, b)`.
 
-### 1. Наслідування: основні поняття
-- **Що таке наслідування? Яку проблему воно вирішує і яку перевірку застосовують?**  
-  Наслідування — механізм ООП, що дозволяє створити новий клас на основі наявного, перевикористовуючи його поля та методи. Вирішує проблему дублювання коду та встановлює зв'язок субтипізації («is-a»). Перевірка: «Підклас *є різновидом* базового класу» (`BugFixTask` *є* `DevelopmentTask`).
-- **Яке ключове слово використовується? Що успадковується, а що ні?**  
-  Слово `extends`. Успадковуються всі `public` та `protected` члени (а також package-private у тому ж пакеті). `private`-поля існують у пам'яті об'єкта, але прямий доступ до них підклас не має (тільки через геттери/сеттери). Конструктори **не успадковуються**, але обов'язково викликаються через `super(...)`.
-- **Який клас є вершиною ієрархії?**  
-  Клас `java.lang.Object`. Якщо `extends` не вказано, клас неявно наслідує `Object`.
-- **Чому в Java дозволено успадковувати лише один клас?**  
-  Для уникнення «проблеми ромба» (Diamond Problem) — неоднозначності при успадкуванні однакових полів чи реалізацій методів від двох батьків. Для множинних контрактів використовуються інтерфейси.
-- **Стосунки «є» (is-a) і «має» (has-a) у проєкті:**  
-  `BugFixTask is-a Task` (наслідування). `Task has-a CostCalculationStrategy` (композиція: завдання *має* стратегію розрахунку).
-
-### 2. Конструктори в ієрархії
-- **У якому порядку виконуються конструктори?**  
-  Зверху вниз по дереву наслідування: `Object` -> `Task` -> `DevelopmentTask` -> `BugFixTask`.
-- **Що робить super(...) і чому він має бути першим?**  
-  Викликає конструктор базового класу для ініціалізації успадкованих полів. Має бути першим оператором, оскільки стан базового об'єкта повинен бути валідним до того, як підклас почне ініціалізацію своїх специфічних полів.
-- **Що станеться, якщо немає конструктора без параметрів, а підклас не викликав super(...) явно?**  
-  Помилка компіляції (`constructor Task in class Task cannot be applied to given types`), оскільки компілятор намагається підставити неявний виклик `super()`.
-- **Для чого this(...) і чим відрізняється від super(...)?**  
-  `this(...)` викликає інший конструктор того ж класу (перевантаження). `super(...)` викликає конструктор батьківського класу. В одному конструкторі не можна викликати обидва одночасно, бо кожен із них зобов'язаний бути найпершим оператором.
-
-### 3. Перевизначення та поліморфізм
-- **Overriding vs Overloading:**  
-  *Overriding (перевизначення)* — заміна реалізації методу базового класу в підкласі з тією ж сигнатурою. *Overloading (перевантаження)* — оголошення методів з однаковим ім'ям, але різними параметрами в одному або похідному класі.
-- **Роль @Override:**  
-  Вказує компілятору перевірити, що метод дійсно перевизначає метод батьківського типу. Якщо допущено помилку в назві чи параметрах, виникне помилка компіляції замість створення випадкового перевантаженого методу.
-- **Чи можна перевизначити private, static або final?**  
-  - `private` — ні, бо підклас його не бачить (буде просто новий незалежний метод).  
-  - `static` — ні, статичні методи не підлягають поліморфізму (відбувається *method hiding*).  
-  - `final` — ні, компілятор забороняє зміну реалізації `final`-методу.
-- **Динамічне зв'язування (Dynamic Dispatch):**  
-  Механізм, за якого конкретна реалізація методу визначається під час виконання (runtime) на основі фактичного (динамічного) типу об'єкта в heap, а не типу змінної посилання.
-- **Статичний vs Динамічний тип:**  
-  `Task task = new BugFixTask(...)`: Статичний тип — `Task` (визначає доступні методи на етапі компіляції). Динамічний тип — `BugFixTask` (визначає фактичну реалізацію в runtime).
-
-### 4. Абстрактні класи, final, sealed
-- **Абстрактний клас:**  
-  Клас, екземпляр якого не можна створити через `new`. Може містити як звичайні методи, конструктори та поля, так і абстрактні методи без тіла.
-- **Модифікатор final:**  
-  Для класу — забороняє наслідування (`final class BugFixTask`). Для методу — забороняє перевизначення (`final calculateCost(...)`).
-- **Sealed класи (Java 17+):**  
-  Класи, які явно обмежують перелік своїх прямих нащадків через `permits`. Дають компілятору гарантію вичерпності (exhaustiveness) у виразах `switch`.
+### 4. Проєктування сервісу та винятки
+- **Чому findAllSortedByNameAndBy<Поле>() винесено в інтерфейс конкретної сутності?**  
+  Тому що поле вторинного сортування (наприклад, `estimatedHours` чи `priority`) специфічне лише для сутності `Task`. Базовий `CRUDService<T>` працює з будь-яким `T extends BaseEntity` (включно з `Project`, у якого немає годин), тому специфічні методи не повинні забруднювати загальний узагальнений контракт (дотримання **Interface Segregation Principle**).
+- **EntityNotFoundException: checked чи unchecked?**  
+  Обрано **`RuntimeException` (unchecked)**: це стандарт сучасного Java/Spring проєктування. Виняток відсутності ресурсу не змушує клієнтський код писати громіздкі блоки `try-catch` чи прокидати `throws` у сигнатурах методів, що зберігає чистоту коду та сумісність із Java Stream API.
+- **Чому findById кидає виняток, а delete повертає boolean?**  
+  `findById` очікує обов'язкової наявності об'єкта для подальшої бізнес-обробки (відсутність — це аномалія, яка повинна переривати флоу). `delete` — ідемпотентна операція: мета — забезпечити відсутність об'єкта в базі; повернення `boolean` просто інформує, чи змінився стан сховища.
+- **Імутабельність сортування:**  
+  Метод сортування повертає `new ArrayList<>(storage.values())`, сортуючи копію. Сховище `storage` залишається незмінним.

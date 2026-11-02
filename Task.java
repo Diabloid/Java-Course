@@ -2,14 +2,19 @@ import java.util.Objects;
 import java.util.List;
 import java.util.ArrayList;
 
-// Базовий абстрактний запечатаний клас завдання (ЛР 6: Рівень 1-3, sealed hierarchy)
-public abstract sealed class Task implements Reportable, Comparable<Task> 
+// Базовий абстрактний запечатаний клас завдання (ЛР 6: sealed hierarchy, ЛР 7-9: extends BaseEntity)
+public abstract sealed class Task extends BaseEntity implements Reportable, Comparable<Task> 
        permits DevelopmentTask, DocumentationTask, LegacyTaskAdapter {
     
-    // Статичний прапорець для демонстрації ланцюжка викликів конструкторів (Рівень 2)
+    // Автоінкремент для зворотної сумісності (якщо id не передано явно)
+    private static long idCounter = 1;
+    public static synchronized long getNextAutoId() {
+        return idCounter++;
+    }
+
+    // Статичний прапорець для демонстрації ланцюжка викликів конструкторів (ЛР 6)
     public static boolean enableConstructorLogging = false;
 
-    private String name;
     private String assignee;
     private int priority;
     private double estimatedHours;
@@ -18,21 +23,34 @@ public abstract sealed class Task implements Reportable, Comparable<Task>
     // Паттерн Strategy (композиція: Task "має" стратегію, а не "є" нею)
     private CostCalculationStrategy costStrategy;
 
-    // Паттерн Observer: список підписників (композиція: Task "має" підписників)
+    // Паттерн Observer: список підписників
     private final List<TaskObserver> observers = new ArrayList<>();
 
-    // Перевантажений конструктор з делегуванням через this(...) (Рівень 2)
+    // Перевантажені конструктори з автогенерацією ID (для зворотної сумісності з ЛР 1-6)
     public Task(String name, String assignee, int priority, double estimatedHours) 
            throws InvalidPriorityException, InvalidTimeException {
-        this(name, assignee, priority, estimatedHours, new PriorityCostStrategy());
+        this(getNextAutoId(), name, assignee, priority, estimatedHours, new PriorityCostStrategy());
+    }
+
+    public Task(String name, String assignee, int priority, double estimatedHours, CostCalculationStrategy costStrategy)
+           throws InvalidPriorityException, InvalidTimeException {
+        this(getNextAutoId(), name, assignee, priority, estimatedHours, costStrategy);
+    }
+
+    // Конструктор із явним ID (ЛР 7-9)
+    public Task(long id, String name, String assignee, int priority, double estimatedHours) 
+           throws InvalidPriorityException, InvalidTimeException {
+        this(id, name, assignee, priority, estimatedHours, new PriorityCostStrategy());
     }
 
     // Базовий конструктор із повною ініціалізацією
-    public Task(String name, String assignee, int priority, double estimatedHours, CostCalculationStrategy costStrategy)
+    public Task(long id, String name, String assignee, int priority, double estimatedHours, CostCalculationStrategy costStrategy)
            throws InvalidPriorityException, InvalidTimeException {
         
+        super(id, name); // Ініціалізація BaseEntity (id, name)
+
         if (enableConstructorLogging) {
-            System.out.println("   [Constructor Task] 1. Ініціалізація базового класу Task: name='" + name + "'");
+            System.out.println("   [Constructor Task] 1. Ініціалізація Task: ID=" + id + ", name='" + name + "'");
         }
 
         // Валідація пріоритету (ЛР 3)
@@ -49,21 +67,15 @@ public abstract sealed class Task implements Reportable, Comparable<Task>
             throw new IllegalArgumentException("Стратегія розрахунку вартості не може бути null");
         }
 
-        this.name = name;
         this.assignee = assignee;
         this.priority = priority;
         this.estimatedHours = estimatedHours;
         this.costStrategy = costStrategy;
     }
 
-    // Абстрактні методи (Рівень 2): кожен підклас зобов'язаний надати власну поведінку
+    // Абстрактні методи (ЛР 6)
     public abstract String getTaskType();
     public abstract String getExecutionDetails();
-
-    // Геттери спільних полів
-    public String getName() {
-        return name;
-    }
 
     public String getAssignee() {
         return assignee;
@@ -117,7 +129,7 @@ public abstract sealed class Task implements Reportable, Comparable<Task>
         return costStrategy;
     }
 
-    // Зміна стратегії в runtime зі сповіщенням підписників
+    // Зміна стратегії в runtime
     public void setCostStrategy(CostCalculationStrategy costStrategy) {
         if (costStrategy == null) {
             throw new IllegalArgumentException("Стратегія розрахунку вартості не може бути null");
@@ -126,7 +138,7 @@ public abstract sealed class Task implements Reportable, Comparable<Task>
         notifyObservers("STRATEGY_CHANGED", "Встановлено стратегію: " + costStrategy.getStrategyName());
     }
 
-    // final метод: підкласи не повинні порушувати делегування розрахунку вартості стратегії (Рівень 2)
+    // final метод: підкласи не повинні порушувати делегування розрахунку вартості
     public final double calculateCost(double hourlyRate) {
         return this.costStrategy.calculateCost(this, hourlyRate);
     }
@@ -159,42 +171,26 @@ public abstract sealed class Task implements Reportable, Comparable<Task>
     // Реалізація Reportable (ЛР 4)
     @Override
     public String generateSummary() {
-        return String.format("[%s] '%s' | Статус: %s | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Деталі: %s",
-                getTaskType().toUpperCase(), name, status, assignee, estimatedHours, getPriorityLabel(), getExecutionDetails());
+        return String.format("[ID: %d | %s] '%s' | Статус: %s | Виконавець: %s | Час: %.1f год | Пріоритет: %s | Деталі: %s",
+                getId(), getTaskType().toUpperCase(), getName(), status, assignee, estimatedHours, getPriorityLabel(), getExecutionDetails());
     }
 
-    // Реалізація Comparable<Task> за часом
+    // Реалізація Comparable<Task> за назвою (природний порядок сортування за алфавітом)
     @Override
     public int compareTo(Task other) {
-        if (other == null) {
-            return 1;
+        if (other == null) return 1;
+        // Порівнюємо за назвою, що узгоджується з findAllSortedByName()
+        int nameCompare = this.getName().compareTo(other.getName());
+        if (nameCompare != 0) {
+            return nameCompare;
         }
-        return Double.compare(this.estimatedHours, other.estimatedHours);
+        return Long.compare(this.getId(), other.getId());
     }
 
     // Перевизначення toString()
     @Override
     public String toString() {
-        return String.format("[%s] '%s' | Статус: %s | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
-                             getTaskType(), name, status, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
-    }
-
-    // Перевизначення equals() та hashCode() через getClass() для збереження симетрії (Рівень 3)
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        
-        Task other = (Task) obj;
-        
-        return this.priority == other.priority &&
-               Double.compare(other.estimatedHours, this.estimatedHours) == 0 &&
-               Objects.equals(this.name, other.name) &&
-               Objects.equals(this.assignee, other.assignee);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getClass(), name, assignee, priority, estimatedHours);
+        return String.format("[ID: %d | %s] '%s' | Статус: %s | Виконавець: %s | Пріоритет: %d (%s) | Час: %.1f год | Стратегія: %s", 
+                             getId(), getTaskType(), getName(), status, assignee, priority, getPriorityLabel(), estimatedHours, costStrategy.getStrategyName());
     }
 }
