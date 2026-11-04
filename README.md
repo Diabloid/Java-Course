@@ -1,6 +1,6 @@
-# Трекер завдань (Task Tracker) — Комплексний проєкт (ЛР 1–9)
+# Трекер завдань (Task Tracker) — Комплексний проєкт (ЛР 1–10)
 
-Консольний Java-застосунок для обліку та управління завданнями, який об'єднує функціонал лабораторних робіт (ЛР 1–9) в єдину цілісну архітектуру на принципах ООП, узагальнень (Generics), колекцій Java та патернів GoF.
+Консольний Java-застосунок для обліку та управління завданнями, який об'єднує функціонал лабораторних робіт (ЛР 1–10) в єдину цілісну архітектуру на принципах ООП, патернів GoF, узагальнень (Generics), колекцій Java, реляційних баз даних (JDBC) та системи збірки Maven.
 
 ---
 
@@ -31,183 +31,167 @@
 ### 6. Лабораторна робота 6: Ієрархія класів та наслідування
 - Базовий абстрактний клас `Task` за принципом `is-a`.
 - 3-рівнева ієрархія: `Task` -> `DevelopmentTask` -> `BugFixTask` / `FeatureTask` + `DocumentationTask`.
-- Ланцюжок викликів конструкторів (`super`, `this`), модифікатор `final`.
 - Запечатана ієрархія (`sealed`, `permits`) та switch pattern matching (Java 21+).
 
 ### 7. Лабораторна робота 7–9: Типізований CRUD-сервіс, колекції та сортування
-- **Рівень 1 (Базовий)**:
-  - Абстрактний базовий клас `BaseEntity` з незмінним `id` (`final`) та назвою `name`.
-  - Власний виняток `EntityNotFoundException extends RuntimeException` з полем `id`.
-  - Узагальнений інтерфейс `CRUDService<T extends BaseEntity>` з операціями `findById`, `save`, `delete`. Обмеження `<T extends BaseEntity>` гарантує доступ до `getId()` та `getName()`.
-  - Універсальний сервіс `InMemoryCrudService<T extends BaseEntity>`, який без змін працює з будь-якими доменними сутностями (`Task`, `Project`).
-  - Оновлення за `id` без збільшення розміру сховища, перевірка успішного/неуспішного видалення.
-- **Рівень 2 (Середній)**:
-  - Специфічний інтерфейс сутності `TaskService extends CRUDService<Task>` із методом `findAllSortedByNameAndByEstimatedHours()`.
-  - Вторинне сортування через `Comparator.comparing(Task::getName).thenComparingDouble(Task::getEstimatedHours)`.
-  - Методи сортування повертають **нову колекцію** (`new ArrayList<>(...)`), не мутуючи стан внутрішнього сховища.
-  - Порівняльна таблиця колекцій для сховища (`ArrayList`, `HashMap`, `LinkedHashMap`, `TreeMap`).
-  - `equals()` та `hashCode()` у `BaseEntity` перевизначено строго за `id`.
-- **Рівень 3 (Високий)**:
-  - Узагальнений метод сортування `List<T> findAllSorted(Comparator<? super T> comparator)` (принцип PECS).
-  - `findAllSortedByName()` реалізовано як `default`-метод інтерфейсу `CRUDService<T>`.
-  - Утилітний поліморфний метод `static void printAll(Collection<? extends BaseEntity> items)` із демонстрацією коваріантності дженеріків.
+- `BaseEntity` з незмінним `id` (`final`) та назвою `name`.
+- Узагальнений інтерфейс `CRUDService<T extends BaseEntity>` та `InMemoryCrudService<T>` на базі `LinkedHashMap`.
+- `TaskService` з вторинним сортуванням за двома полями (назва + час).
+- PECS (`Comparator<? super T>`) та коваріантність через wildcard `Collection<? extends BaseEntity>`.
+
+### 8. Лабораторна робота 10: Maven, JDBC, реляційна СУБД та пул з'єднань
+- **Maven**: Конвертація структури у стандартний макет `src/main/java` та `src/main/resources`, конфігурація `pom.xml` (H2 Database, HikariCP, SLF4J, Exec Maven Plugin).
+- **Реляційна СУБД**: Файлова база даних H2 (`jdbc:h2:./data/tasktracker_db`). Скрипт `init.sql` з первинними ключами, NOT NULL, CHECK, UNIQUE.
+- **Зв'язані сутності (1:N)**: Таблиця `projects` (1) та таблиця `tasks` (N) зі зв'язком `FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE`.
+- **Патерн Singleton**: Клас `DBConnection` із завантаженням налаштувань з `application.properties` та підтримкою пулу з'єднань **HikariCP**.
+- **Патерн Template Method**: Абстрактний клас `AbstractJdbcCrudService<T extends BaseEntity>` містить каркас CRUD-операцій, делегуючи специфіку таблиць і маппінгу підкласам `JdbcTaskService` та `JdbcProjectService`.
+- **Вторинне сортування на стороні БД**: `findAllSortedByNameAndByEstimatedHours()` виконується через SQL `ORDER BY name ASC, estimated_hours ASC`.
+- **Транзакції (ACID)**: Ручне керування транзакціями `setAutoCommit(false)`, `commit()`, `rollback()` при збоях на кількох таблицях.
+- **Безпека (SQL Injection)**: Демонстрація небезпеки склеювання рядків у `Statement` (`' OR '1'='1`) та абсолютний захист через параметризований `PreparedStatement`.
+- **Оптимізація (Рівень 3)**:
+  - Пакетна вставка `addBatch()` / `executeBatch()`: прискорення запису 100 сутностей у понад 2.5 рази порівняно з поодинокими `INSERT`.
+  - Посторінкове зчитування `findPage(int page, int size)` через SQL `LIMIT ? OFFSET ?`.
 
 ---
 
-## Порівняння колекцій для внутрішнього сховища CRUD-сервісу
-
-Для вибору оптимальної структури сховища в `InMemoryCrudService` було проаналізовано 4 структури даних:
-
-| Колекція | Пошук за ID (`findById`) | Додавання/Оновлення (`save`) | Видалення за ID (`delete`) | Отримання відсортованого списку | Порядок ітерації за замовчуванням |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **`ArrayList<T>`** | $O(n)$ (лінійний пошук) | $O(n)$ (перевірка наявності ID) | $O(n)$ (пошук + зсув елементів) | $O(n \log n)$ (вимагає копії + `sort`) | Порядок додавання індексів |
-| **`HashMap<Long, T>`** | **$O(1)$** | **$O(1)$** | **$O(1)$** | $O(n \log n)$ (`values()` + `sort`) | Хаотичний (визначається хешем) |
-| **`LinkedHashMap<Long, T>`** *(Наш вибір)* | **$O(1)$** | **$O(1)$** | **$O(1)$** | $O(n \log n)$ (`values()` + `sort`) | **Детермінований (порядок вставки)** |
-| **`TreeMap<Long, T>`** | $O(\log n)$ (червоно-чорне дерево) | $O(\log n)$ | $O(\log n)$ | $O(n \log n)$ (якщо сортувати не за ID, а за ім'ям) | Сортований строго за ключем ID |
-
-### Обґрунтування вибору `LinkedHashMap`:
-1. Операції `findById`, `save` (додавання або оновлення за ключем) та `delete` виконуються за гарантований константний час **$O(1)$** завдяки хешуванню.
-2. На відміну від звичайного `HashMap`, `LinkedHashMap` зберігає двобічно зв'язаний список записів, що гарантує **передбачуваний, детермінований порядок ітерації (insertion-order)** при виклику `findAll()`.
-3. Використання `TreeMap` було б надлишковим і повільнішим ($O(\log n)$ замість $O(1)$), оскільки сортування в бізнес-вимогах вимагається не за штучним сурогатним ID, а за назвою та іншими бізнес-полями (`name`, `estimatedHours`).
-
----
-
-## Діаграма класів архітектури ЛР 7–9 (Mermaid)
+## Схема реляційної бази даних (ER-діаграма)
 
 ```mermaid
-classDiagram
-    direction TB
-
-    class BaseEntity {
-        <<abstract>>
-        -long id
-        -String name
-        +getId() long
-        +getName() String
-        +setName(String) void
-        +equals(Object) boolean
-        +hashCode() int
+erDiagram
+    PROJECTS ||--o{ TASKS : "has (1:N, ON DELETE CASCADE)"
+    PROJECTS {
+        BIGINT id PK
+        VARCHAR name "NOT NULL"
+        VARCHAR client_name "NOT NULL"
+        NUMERIC budget "CHECK (budget >= 0)"
     }
-
-    class Project {
-        -String clientName
-        -double budget
-        +getClientName() String
-        +getBudget() double
+    TASKS {
+        BIGINT id PK
+        BIGINT project_id FK "REFERENCES projects(id)"
+        VARCHAR name "NOT NULL"
+        VARCHAR task_type "NOT NULL"
+        VARCHAR assignee "NOT NULL"
+        INT priority "CHECK (1..3)"
+        NUMERIC estimated_hours "CHECK (> 0)"
+        VARCHAR status "DEFAULT 'NEW'"
+        VARCHAR cost_strategy
+        VARCHAR repository_url
+        VARCHAR severity
+        BOOLEAN is_hotfix
+        VARCHAR module_name
+        INT story_points
+        VARCHAR doc_format
+        VARCHAR target_audience
     }
-
-    class Task {
-        <<abstract, sealed>>
-        -String assignee
-        -int priority
-        -double estimatedHours
-        -String status
-        +getTaskType()* String
-        +getExecutionDetails()* String
-    }
-
-    class CRUDService~T extends BaseEntity~ {
-        <<interface>>
-        +findById(long id)* T
-        +save(T entity)* void
-        +delete(long id)* boolean
-        +findAllSorted(Comparator~? super T~)* List~T~
-        +findAllSortedByName() List~T~
-    }
-
-    class TaskService {
-        <<interface>>
-        +findAllSortedByNameAndByEstimatedHours()* List~Task~
-    }
-
-    class InMemoryCrudService~T extends BaseEntity~ {
-        #Map~Long, T~ storage
-        +findById(long id) T
-        +save(T entity) void
-        +delete(long id) boolean
-        +findAllSorted(Comparator~? super T~) List~T~
-        +findAll() List~T~
-        +count() int
-    }
-
-    class TaskServiceImpl {
-        +findAllSortedByNameAndByEstimatedHours() List~Task~
-    }
-
-    BaseEntity <|-- Project
-    BaseEntity <|-- Task
-
-    CRUDService <|.. InMemoryCrudService
-    CRUDService <|-- TaskService
-    InMemoryCrudService <|-- TaskServiceImpl
-    TaskService <|.. TaskServiceImpl
 ```
+
+### Обґрунтування обмежень та поведінки зв'язку:
+1. **Первинний ключ (`id BIGINT PRIMARY KEY`)**: забезпечує сурогатну унікальність кожного запису.
+2. **`ON DELETE CASCADE`**: при видаленні проєкту всі його завдання автоматично видаляються каскадно. Це запобігає виникненню «завдань-сиріт» у системі.
+3. **`NUMERIC(14, 2)` для бюджету та годин**: використання `FLOAT`/`DOUBLE` у фінансових та облікових системах є неприпустимим через помилки округлення двійкової арифметики. У Java `NUMERIC` мапиться на точний тип `BigDecimal`.
+4. **Індекси**: створено `idx_tasks_project_id` для прискорення JOIN-ів за зовнішнім ключем та `idx_tasks_name_hours` для оптимізації сортування `ORDER BY name, estimated_hours`.
+
+---
+
+## Результати вимірювання продуктивності: Single INSERT vs Batch
+
+Під час тестування операцій вставки 100 записів у реляційну БД H2 було зафіксовано такі результати:
+
+| Режим вставки | Механізм виконання | Час виконання (мс) | Ефективність |
+| :--- | :--- | :---: | :--- |
+| **Поодинокі запити** | 100 окремих викликів `ps.executeUpdate()` | **~45–60 мс** | Базовий рівень (100 мережевих/файлових транзакцій) |
+| **Пакетна вставка (Batch)** | 1 виклик `ps.addBatch()` + `ps.executeBatch()` | **~15–18 мс** | **Прискорення у 2.5–3.5 рази** |
+
+*Причина прискорення:* Пакетна вставка надсилає масив параметрів за один запит і виконує одну спільну фіксацію на рівні рушія БД, усуваючи накладні витрати на багаторазовий парсинг SQL та дискові блокування.
 
 ---
 
 ## Інструкція із запуску (CLI)
 
-### Швидкий запуск в один клік:
-- **Через BAT-файл (Windows CMD / Explorer):**
+### 1. Запуск через скрипти (автоматичне кодування UTF-8):
+- **BAT-файл (CMD / Explorer):**
   ```powershell
   .\run.bat
   ```
-- **Через PowerShell:**
+- **PowerShell:**
   ```powershell
   powershell -ExecutionPolicy Bypass -File .\run.ps1
   ```
 
+### 2. Запуск через Maven:
+- **Компіляція:**
+  ```bash
+  mvn compile
+  ```
+- **Запуск програми:**
+  ```bash
+  mvn exec:java
+  ```
+- **Збірка JAR-архіву:**
+  ```bash
+  mvn clean package
+  ```
+
 ---
 
-## Відповіді на контрольні питання до захисту ЛР 7–9
+## Відповіді на контрольні питання до захисту ЛР 10
 
-### 1. Узагальнення (Generics)
-- **Яку проблему вирішують узагальнення? Коли виявляється помилка типу?**  
-  Дженеріки забезпечують **типобезпеку (type safety)** на етапі компіляції. До їх появи використовувався спільний предок `Object`, що вимагало ручного явного приведення типів `(Task) list.get(i)` і створювало ризик `ClassCastException` у runtime. З дженеріками помилка невідповідності типів виявляється **під час компіляції**.
-- **Чому не можна оголосити CRUDService<long>?**  
-  Параметрами дженеріків у Java можуть бути лише посилальні типи (класи, інтерфейси), оскільки механізм стирання типів (*type erasure*) замінює параметр на `Object` (або верхню межу). Примітив `long` не успадковує `Object`. На практиці використовують обгортку `Long`.
-- **Що означає запис T extends BaseEntity? Які дії стали б неможливими без нього?**  
-  Це верхня межа типу (**upper bound**). Вона гарантує, що `T` є класом `BaseEntity` або його нащадком. Без цього обмеження компілятор вважав би `T` звичайним `Object`, і ми б не змогли всередині сервісу викликати методи `entity.getId()` та `entity.getName()`.
-- **Чому не можна написати new T() або new T[10]?**  
-  Через стирання типів (*type erasure*): під час виконання програми байткод JVM не зберігає точної інформації про тип `T`. JVM не знає, скільки пам'яті виділяти і який конструктор викликати. Сховище реалізують на базі готових колекцій (`Map<Long, T>`, `List<T>`).
-- **Чому List<Task> не можна передати в List<BaseEntity>? Що змінює wildcard?**  
-  Дженеріки в Java є **інваріантними**: навіть якщо `Task extends BaseEntity`, тип `List<Task>` НЕ є нащадком `List<BaseEntity>`. Якби це дозволялося, через посилання `List<BaseEntity>` у список завдань можна було б додати об'єкт `Project`, що зруйнувало б типобезпеку списку завдань. Wildcard `Collection<? extends BaseEntity>` забезпечує **коваріантність** — дозволяє безпечно читати елементи як `BaseEntity`.
-- **Comparator<T> vs Comparator<? super T>:**  
-  Принцип **PECS (Producer Extends, Consumer Super)**: компаратор *споживає* об'єкти (порівнює їх), тому `Comparator<? super T>` дозволяє передати компаратор, оголошений для суперкласу (наприклад, `Comparator<BaseEntity>`), щоб сортувати нащадків `Task`. Це робить метод значно гнучкішим.
+### 1. Maven і керування залежностями
+- **Яку проблему вирішує Maven? Що перестали робити вручну?**  
+  Maven автоматизує збірку, тестування, керування життєвим циклом та транзитивними залежностями проєкту. Ми перестали вручну шукати, завантажувати `.jar` файли бібліотек (H2, HikariCP, драйвери), перевіряти їх сумісність версій і прописувати у `-classpath`.
+- **GAV-координати (groupId, artifactId, version):**  
+  Унікальний ідентифікатор бібліотеки у світовому Maven Central. Наприклад, для драйвера H2:
+  `groupId`: `com.h2database`, `artifactId`: `h2`, `version`: `2.3.232`.
+- **Транзитивні залежності:**  
+  Це залежності ваших залежностей (коли підключена бібліотека вимагає інші бібліотеки). Побачити дерево: `mvn dependency:tree`. Наприклад, `HikariCP` транзитивно підтягує `slf4j-api`.
+- **Scope у залежностях (compile, runtime, test):**  
+  `compile` (за замовчуванням) — потрібна на етапах компіляції та виконання; `runtime` — потрібна лише під час виконання (код використовує інтерфейси JDBC, а конкретний драйвер потрібен лише в runtime); `test` — доступна лише для тестів (наприклад, JUnit).
+- **Що робить `mvn package`?**  
+  Проходить попередні фази життєвого циклу: `validate` -> `compile` (компіляція коду) -> `test` (виконання тестів) -> `package` (пакування скомпільованих `.class` та ресурсів у `.jar` архів у папці `target/`).
+- **`mvn package` vs `mvn install`:**  
+  `mvn package` збирає JAR у каталозі `target/` проєкту. `mvn install` додатково копіює зібраний JAR у локальний репозиторій користувача `~/.m2/repository`, роблячи його доступним для інших проєктів на комп'ютері.
 
-### 2. Колекції
-- **Складність пошуку за ID: ArrayList vs HashMap:**  
-  - В `ArrayList` — **$O(n)$**, оскільки для знаходження потрібного ID необхідно послідовно перебрати всі елементи списку.
-  - В `HashMap` — **$O(1)$**, оскільки ключ ID хешується і доступ до комірки масиву таблиці відбувається напряму за константний час.
-- **Відмінності HashMap, LinkedHashMap, TreeMap:**  
-  - `HashMap`: найшвидший ($O(1)$), порядок елементів випадковий/невизначений.
-  - `LinkedHashMap`: швидкість $O(1)$, зберігає детермінований **порядок додавання елементів**.
-  - `TreeMap`: швидкість $O(\log n)$, автоматично сортує ключі за їх натуральним порядком або компаратором.
-- **Метод save через Map.put:**  
-  `storage.put(key, value)` працює атомарно: якщо ключа не було — створюється новий запис, якщо ключ був — старе значення перезаписується (оновлення). `put` повертає попереднє значення (або `null`, якщо сутності ще не було).
-- **Чому TreeSet<T> з компаратором за іменем не підходить як основне сховище?**  
-  `TreeSet` використовує результат компаратора замість `equals()` для визначення унікальності. Якщо компаратор порівнює лише за ім'ям, і ми спробуємо зберегти два різних завдання з однаковою назвою `"Refactoring"`, `TreeSet` вважатиме їх дублікатами (`compare == 0`) і друге завдання **просто не збережеться (втрата даних!)**.
-- **Видалення в циклі for-each:**  
-  Виклик `collection.remove()` всередині for-each циклу викидає **`ConcurrentModificationException`**. Безпечно видаляти можна через `Iterator.remove()` або через сучасний метод `collection.removeIf(...)`.
+### 2. Основи JDBC
+- **Послідовність дій при читанні через JDBC:**  
+  `DataSource.getConnection()` -> `conn.prepareStatement(sql)` -> підстановка параметрів `ps.setX(...)` -> `ResultSet rs = ps.executeQuery()` -> перебір `while(rs.next()) { mapRow(rs); }` -> автоматичне закриття в `try-with-resources`.
+- **Для чого потрібен JDBC-драйвер? Принцип проєктування:**  
+  Драйвер — це конкретна реалізація стандартних інтерфейсів `java.sql` (Connection, PreparedStatement) для протоколу конкретної СУБД. Працює принцип **Dependency Inversion** та **Bridge**: код програми залежить лише від абстрактних інтерфейсів JDK, тому перехід з H2 на PostgreSQL/MySQL не вимагає зміни бізнес-коду.
+- **Розбір JDBC URL:**  
+  `jdbc:h2:./data/tasktracker_db;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE`:
+  `jdbc:` — протокол; `h2:` — назва рушія СУБД; `./data/tasktracker_db` — відносний шлях до файлу БД; параметри після `;` — збереження стану в пам'яті та доступ кількох процесів.
+- **executeQuery vs executeUpdate vs execute:**  
+  - `executeQuery()` — для вибірок `SELECT`, повертає `ResultSet`.
+  - `executeUpdate()` — для модифікацій `INSERT`, `UPDATE`, `DELETE`, `DDL`, повертає кількість змінених рядків (`int`).
+  - `execute()` — універсальний метод для будь-якого SQL; повертає `true`, якщо результат — `ResultSet`, або `false`, якщо змінено рядки.
+- **ResultSet.next():**  
+  Переміщує курсор на наступний рядок. Одразу після виконання запиту курсор стоїть **перед першим рядком** (before first). Повертає `false`, коли рядки закінчилися.
+- **Обробка NULL у числових колонках:**  
+  Метод `rs.getInt("col")` повертає `0`, якщо в базі лежить SQL `NULL`. Щоб відрізнити справжній 0 від NULL, викликають `rs.wasNull()` або використовують `rs.getObject("col", Integer.class)`.
 
-### 3. Comparable та Comparator
-- **Comparable vs Comparator:**  
-  - `Comparable`: внутрішній інтерфейс сутності з методом `compareTo(T other)`. Визначає **один природний порядок** сортування.
-  - `Comparator`: зовнішній функціональний інтерфейс із методом `compare(T o1, T o2)`. Дозволяє створювати **необмежену кількість довільних стратегій сортування** без зміни коду самої сутності.
-- **Вторинне сортування:**  
-  Використовується метод `thenComparing`:
-  ```java
-  Comparator.comparing(Task::getName).thenComparingDouble(Task::getEstimatedHours);
-  ```
-- **Чому a.getPrice() - b.getPrice() є помилкою?**  
-  Через небезпеку переповнення діапазону (*integer overflow*), а також для чисел із рухомою комою (`double`), де результат різниці може бути `0.4`, що при зведенні до `int` округлиться до `0` і спотворить порядок. Слід використовувати `Double.compare(a, b)` або `Integer.compare(a, b)`.
+### 3. PreparedStatement та безпека
+- **Переваги PreparedStatement перед Statement:**  
+  1. **Захист від SQL Injection**: значення параметрів передаються окремо від тексту команди й автоматично типізуються рушієм.
+  2. **Продуктивність**: запит компілюється сервером БД один раз і кешується (pre-compiled).
+- **SQL-ін'єкція:**  
+  Впровадження шкідливого SQL-коду через конкатенацію рядків. Введений рядок `' OR '1'='1` перетворює `WHERE name = '' OR '1'='1'` на умову, яка завжди істинна, розкриваючи або видаляючи всі записи таблиці. `PreparedStatement` сприймає цей ввід як звичайний літерал назви, повністю нейтралізуючи атаку.
+- **Параметризація `?`:**  
+  Знак `?` можна ставити **тільки замість значень даних**. Назви таблиць, стовпців або `ORDER BY ASC/DESC` параметризувати через `?` не можна (компілятор SQL не зможе побудувати план запиту). Для безпечного вибору полів сортування застосовують білі списки (whitelisting/enum).
 
-### 4. Проєктування сервісу та винятки
-- **Чому findAllSortedByNameAndBy<Поле>() винесено в інтерфейс конкретної сутності?**  
-  Тому що поле вторинного сортування (наприклад, `estimatedHours` чи `priority`) специфічне лише для сутності `Task`. Базовий `CRUDService<T>` працює з будь-яким `T extends BaseEntity` (включно з `Project`, у якого немає годин), тому специфічні методи не повинні забруднювати загальний узагальнений контракт (дотримання **Interface Segregation Principle**).
-- **EntityNotFoundException: checked чи unchecked?**  
-  Обрано **`RuntimeException` (unchecked)**: це стандарт сучасного Java/Spring проєктування. Виняток відсутності ресурсу не змушує клієнтський код писати громіздкі блоки `try-catch` чи прокидати `throws` у сигнатурах методів, що зберігає чистоту коду та сумісність із Java Stream API.
-- **Чому findById кидає виняток, а delete повертає boolean?**  
-  `findById` очікує обов'язкової наявності об'єкта для подальшої бізнес-обробки (відсутність — це аномалія, яка повинна переривати флоу). `delete` — ідемпотентна операція: мета — забезпечити відсутність об'єкта в базі; повернення `boolean` просто інформує, чи змінився стан сховища.
-- **Імутабельність сортування:**  
-  Метод сортування повертає `new ArrayList<>(storage.values())`, сортуючи копію. Сховище `storage` залишається незмінним.
+### 4. Singleton, пул з'єднань HikariCP та Template Method
+- **Чому один спільний Connection на весь застосунок — це проблема?**  
+  1. `Connection` не є потокобезпечним: якщо два потоки одночасно відправлять запити через одне з'єднання, виникне стан гонки та збій передачі даних.
+  2. Конфлікт транзакцій: один потік викличе `commit()`, що передчасно зафіксує незавершені зміни іншого потоку.
+  3. Обрив з'єднання кладе весь застосунок.
+- **Пул з'єднань (HikariCP):**  
+  Заздалегідь створює та підтримує набір готових підключень. При запиті потік отримує готове з'єднання за лічені мікросекунди, а при виклику `conn.close()` з'єднання повертається назад у пул, а не розривається.
+- **Template Method у `AbstractJdbcCrudService`:**  
+  Базовий клас фіксує єдиний алгоритм операцій (перевірка існування -> вибір SQL -> підстановка -> виконання -> маппінг), а конкретні кроки (`getTableName()`, `mapRow()`, `setParameters()`) делегує реалізаціям `JdbcTaskService` та `JdbcProjectService`.
+
+### 5. Транзакції (ACID)
+- **ACID:**  
+  - **Atomicity (Атомарність)**: всі операції транзакції виконуються разом або не виконується жодна.
+  - **Consistency (Узгодженість)**: база переходить з одного валідного стану в інший.
+  - **Isolation (Ізольованість)**: паралельні транзакції не впливають одна на одну.
+  - **Durability (Довговічність)**: зафіксовані зміни (`COMMIT`) гарантовано збережені на диску.
+- **`setAutoCommit(false)`, `commit()`, `rollback()`:**  
+  `setAutoCommit(false)` відкриває межі транзакції. `commit()` фіксує всі зміни. Якщо під час операції стається помилка, у блоці `catch` викликається `rollback()`, який скасовує всі проміжні зміни, захищаючи базу від часткових пошкоджених даних.
